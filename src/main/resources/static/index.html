@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pune Bazar - Automatic WhatsApp Calculator & Ledger System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <div class="brand">
+            <span class="brand-logo">🚩</span>
+            <div class="brand-text">
+                <h2>PUNE BAZAR</h2>
+                <p>Automatic WhatsApp Calculator & Market Ledger System</p>
+            </div>
+        </div>
+
+        <div class="nav-actions">
+            <div class="user-badge">
+                <span>👤 Logged in as: <strong id="loggedInUser">Admin</strong></span>
+            </div>
+            <a href="/logout" class="btn-logout">🚪 Logout</a>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <!-- Real-Time KPI Dashboard Grid -->
+        <section class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon sell">📊</div>
+                <div class="kpi-data">
+                    <h3>Today's Total Sell</h3>
+                    <div class="value" id="kpiTotalSell">₹0.00</div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon payment">💵</div>
+                <div class="kpi-data">
+                    <h3>Today's Payments</h3>
+                    <div class="value" id="kpiTotalPayment">₹0.00</div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon commission">✂️</div>
+                <div class="kpi-data">
+                    <h3>Today's Commission</h3>
+                    <div class="value" id="kpiTotalCommission">₹0.00</div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon balance">🔴</div>
+                <div class="kpi-data">
+                    <h3>Total Outstanding (येणे)</h3>
+                    <div class="value" id="kpiCustomerBalance">₹0.00</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Workspace Grid -->
+        <div class="main-grid">
+
+            <!-- Left Column: Trade Transaction & Auto-Calculation Form -->
+            <section class="card">
+                <div class="card-title">
+                    <span>⚡ Daily Trade Entry & Math Engine</span>
+                    <span style="font-size: 0.8125rem; font-weight: 500; color: var(--primary);">Real-time Auto Calc</span>
+                </div>
+
+                <form id="tradeForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="selectCustomer">Select Customer / Trader *</label>
+                            <select id="selectCustomer" class="form-control" required>
+                                <option value="">-- Choose Customer --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="tradeReceiptStyle">Market / Receipt Type *</label>
+                            <select id="tradeReceiptStyle" class="form-control">
+                                <option value="TYPE_1">Type 1: Comi + Farak + 40% Share + Magil Baki (e.g. Shrigonda)</option>
+                                <option value="TYPE_2">Type 2: Simple Direct (PO/PC/Payment Only - e.g. Jamkhedkar)</option>
+                                <option value="TYPE_3">Type 3: Comi + Pagar + Magil Baki (e.g. Sai / Kisan)</option>
+                                <option value="TYPE_4">Type 4: Pagar Only (No Commission)</option>
+                                <option value="TYPE_5">Type 5: Comi + 40% Share + Magil Baki (e.g. Ganeshra)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="txDate">Transaction Date</label>
+                            <input type="date" id="txDate" class="form-control" required>
+                        </div>
+                        <div class="form-group" id="commGroup">
+                            <label for="commPercent">Commission Rate (%)</label>
+                            <input type="number" id="commPercent" class="form-control" value="10.00" step="0.5">
+                        </div>
+                        <div class="form-group" id="shareGroup">
+                            <label for="shareRatePercent">Share Rate (%)</label>
+                            <input type="number" id="shareRatePercent" class="form-control" value="40.00" step="1">
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Market Input Fields populated based on selected customer's market codes -->
+                    <div id="dynamicMarketInputs">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="sellPo">SELL PO ₹</label>
+                                <input type="number" id="sellPo" class="form-control market-input" data-session="PO" data-type="sell" placeholder="e.g. 25000" value="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="paymentPo">PAYMENT PO ₹</label>
+                                <input type="number" id="paymentPo" class="form-control market-input" data-session="PO" data-type="payment" placeholder="e.g. 20000" value="0" step="0.01">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="sellPc">SELL PC ₹</label>
+                                <input type="number" id="sellPc" class="form-control market-input" data-session="PC" data-type="sell" placeholder="e.g. 10000" value="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="paymentPc">PAYMENT PC ₹</label>
+                                <input type="number" id="paymentPc" class="form-control market-input" data-session="PC" data-type="payment" placeholder="e.g. 8000" value="0" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tradeYene">Magil Yene ₹ (Ma yeṇe)</label>
+                            <input type="number" id="tradeYene" class="form-control" placeholder="e.g. 1000" value="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="tradeDene">Magil Dene ₹ (Ma dene)</label>
+                            <input type="number" id="tradeDene" class="form-control" placeholder="e.g. 500" value="0" step="0.01">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" id="farakGroup">
+                            <label for="farakAmount">Miss Payment ₹</label>
+                            <input type="number" id="farakAmount" class="form-control" placeholder="e.g. 0" value="0" step="0.01">
+                        </div>
+                        <div class="form-group" id="pagarGroup">
+                            <label for="pagarAmount">Pagar Amount ₹</label>
+                            <input type="number" id="pagarAmount" class="form-control" placeholder="e.g. 0" value="0" step="0.01">
+                        </div>
+                    </div>
+
+                    <!-- Automated Math Preview Box Matching Photo Format -->
+                    <div class="calculation-summary">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.5rem; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.4rem; color: #34d399;">
+                            <div>SELL</div>
+                            <div>PAYMENT</div>
+                        </div>
+                        
+                        <div id="dynamicPreviewSessions">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem; margin-bottom: 0.3rem;">
+                                <div>PO:-<span id="previewSellPo">₹0.00</span></div>
+                                <div><span id="previewPaymentPo">₹0.00</span></div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                <div>PC:-<span id="previewSellPc">₹0.00</span></div>
+                                <div><span id="previewPaymentPc">₹0.00</span></div>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-weight: 800; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 0.4rem; margin-bottom: 0.75rem;">
+                            <div>TOTAL:-<span id="previewTotalSell">₹0.00</span></div>
+                            <div><span id="previewTotalPayment">₹0.00</span></div>
+                        </div>
+
+                        <div class="summary-item" id="previewComiRow">
+                            <span>COMI * <span id="previewCommRate">10</span>%:</span>
+                            <strong id="previewCommCut" style="color: var(--accent);">-₹0.00</strong>
+                        </div>
+                        <div class="summary-item" id="previewAfterCommRow">
+                            <span>Total (After Commission):</span>
+                            <strong id="previewTotalAfterComm">₹0.00</strong>
+                        </div>
+                        <div class="summary-item" id="previewPaymentRow">
+                            <span>Payment Received:</span>
+                            <strong id="previewPayment" style="color: #60a5fa;">-₹0.00</strong>
+                        </div>
+                        <div class="summary-item" id="previewFarakRow">
+                            <span>Miss Payment:</span>
+                            <strong id="previewFarak" style="color: #a7f3d0;">₹0.00</strong>
+                        </div>
+                        <div class="summary-item" id="previewShareRow">
+                            <span>Share (<span id="previewShareRate">40</span>%):</span>
+                            <strong id="previewShareAmount" style="color: #c084fc;">₹0.00</strong>
+                        </div>
+                        <div class="summary-item" id="previewPagarRow">
+                            <span>Pagar Deduction:</span>
+                            <strong id="previewPagarAmount" style="color: #fca5a5;">-₹0.00</strong>
+                        </div>
+                        <div class="summary-item">
+                            <span>Magil Yene (Ma yeṇe):</span>
+                            <strong id="previewYene" style="color: #34d399;">₹0.00</strong>
+                        </div>
+                        <div class="summary-item">
+                            <span>Magil Dene (Ma dene):</span>
+                            <strong id="previewDene" style="color: #f87171;">-₹0.00</strong>
+                        </div>
+                        <div class="summary-item total">
+                            <span>Total (Net Balance):</span>
+                            <strong id="previewNetBalance" style="color: #fbbf24;">₹0.00</strong>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary">💾 Process Trade & Update Ledger</button>
+                </form>
+            </section>
+
+            <!-- Right Column: Customer Management & Ledger List -->
+            <section class="card">
+                <div class="card-title">
+                    <span>👥 Active Customers & Market Ledgers</span>
+                    <button id="btnNewCustomerModal" class="btn-primary" style="width: auto; padding: 0.5rem 1rem; font-size: 0.8125rem;">+ Add Customer</button>
+                </div>
+
+                <!-- Customer Search Bar -->
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search customer by name, mobile, or city...">
+                </div>
+
+                <!-- Market Filter Chips -->
+                <div class="market-chips" id="marketChips">
+                    <button class="chip active" data-market="ALL">All Markets</button>
+                    <button class="chip" data-market="Solapur">Solapur</button>
+                    <button class="chip" data-market="Pune">Pune</button>
+                    <button class="chip" data-market="Mumbai">Mumbai</button>
+                    <button class="chip" data-market="Kolhapur">Kolhapur</button>
+                    <button class="chip" data-market="Sangli">Sangli</button>
+                </div>
+
+                <!-- Customer Ledger Table -->
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Customer Name</th>
+                                <th>City / Market</th>
+                                <th>Mobile</th>
+                                <th>Balance (Total येणे)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerTableBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text-muted);">Loading active trade ledgers...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- One-Click WhatsApp Statement Modal -->
+    <div id="whatsappModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">📱 One-Click WhatsApp Statement</h3>
+                <button class="close-btn" onclick="closeModal('whatsappModal')">&times;</button>
+            </div>
+
+            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">
+                Statement formatted for customer: <strong id="waCustomerName" style="color: #ffffff;">---</strong>
+            </p>
+
+            <div class="whatsapp-preview-box" id="waMessageText">Generating template...</div>
+
+            <a id="btnOpenWhatsApp" href="#" target="_blank" class="btn-launch-wa">
+                🚀 Send Statement on WhatsApp
+            </a>
+        </div>
+    </div>
+
+    <!-- New Customer Modal -->
+    <div id="customerModal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 540px;">
+            <div class="modal-header">
+                <h3 class="modal-title">➕ Add New Market Customer</h3>
+                <button class="close-btn" onclick="closeModal('customerModal')">&times;</button>
+            </div>
+
+            <form id="newCustomerForm">
+                <div class="form-group">
+                    <label for="custName">Customer Name *</label>
+                    <input type="text" id="custName" class="form-control" placeholder="e.g. Ramesh Patil" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="custMobile">Mobile Number *</label>
+                        <input type="text" id="custMobile" class="form-control" placeholder="e.g. 9822012345" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="custCity">City / Market *</label>
+                        <input type="text" id="custCity" class="form-control" placeholder="e.g. Solapur, Pune, Mumbai" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="custCommission">Commission Rate %</label>
+                        <input type="number" id="custCommission" class="form-control" value="10.00" step="0.5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="custReceiptStyle">Receipt & Math Style *</label>
+                        <select id="custReceiptStyle" class="form-control">
+                            <option value="TYPE_1">Type 1: Comi + Farak + 40% Share + Magil Baki (e.g. Shrigonda)</option>
+                            <option value="TYPE_2">Type 2: Simple Direct (PO/PC/Payment Only - e.g. Jamkhedkar)</option>
+                            <option value="TYPE_3">Type 3: Comi + Pagar + Magil Baki (e.g. Sai / Kisan)</option>
+                            <option value="TYPE_4">Type 4: Pagar Only (No Commission)</option>
+                            <option value="TYPE_5">Type 5: Comi + 40% Share + Magil Baki (e.g. Ganeshra)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;">💾 Save Customer Profile</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Customer History Modal -->
+    <div id="historyModal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 680px;">
+            <div class="modal-header">
+                <h3 class="modal-title">📜 Ledger Statement History</h3>
+                <button class="close-btn" onclick="closeModal('historyModal')">&times;</button>
+            </div>
+
+            <h4 id="historyCustomerTitle" style="color: #34d399; margin-bottom: 1rem;">Customer Ledger</h4>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Total Sell</th>
+                            <th>Commission</th>
+                            <th>Payment</th>
+                            <th>Prev Bal</th>
+                            <th>Net Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center;">Loading history...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>

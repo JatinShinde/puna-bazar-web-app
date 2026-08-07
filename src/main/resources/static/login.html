@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Pune Bazar WhatsApp Calculator & Ledger System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #064e3b 0%, #022c22 50%, #0f172a 100%);
+            margin: 0;
+            padding: 1rem;
+        }
+        .login-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            color: #f8fafc;
+        }
+        .brand-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .brand-icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+        .brand-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #34d399, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+        .brand-sub {
+            color: #94a3b8;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 0.5rem;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+        .form-control:focus {
+            border-color: #34d399;
+            box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 0.875rem;
+            border: none;
+            border-radius: 0.75rem;
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            margin-top: 1rem;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
+        }
+        .demo-hint {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.75rem;
+            font-size: 0.8125rem;
+            color: #94a3b8;
+            text-align: center;
+        }
+        .demo-hint code {
+            color: #34d399;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="brand-header">
+            <div class="brand-icon">🚩</div>
+            <h1 class="brand-title">PUNE BAZAR</h1>
+            <p class="brand-sub">WhatsApp Calculator & Ledger SaaS System</p>
+        </div>
+
+        <div id="errorMessage" class="alert-error" style="display: none;">
+            ⚠️ Invalid Admin Credentials. Please check username and password.
+        </div>
+
+        <form action="/login" method="POST">
+            <div class="form-group">
+                <label for="username">Admin Username</label>
+                <input type="text" id="username" name="username" class="form-control" placeholder="Enter username" required value="admin">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-control" placeholder="Enter password" required value="admin123">
+            </div>
+
+            <button type="submit" class="btn-submit">🔐 Secure Admin Login</button>
+        </form>
+
+        <div class="demo-hint">
+            💡 Default Admin Access:<br>
+            Username: <code>admin</code> &nbsp;|&nbsp; Password: <code>admin123</code>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('error')) {
+            document.getElementById('errorMessage').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

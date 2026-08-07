@@ -1,0 +1,18 @@
+target/
+*.jar
+*.war
+*.ear
+*.class
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE files
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.metadata/
+*.log
+
+# Data directory
+data/
