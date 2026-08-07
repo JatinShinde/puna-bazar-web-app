@@ -474,17 +474,19 @@ async function handleTradeSubmit(e) {
         });
 
         if (res.ok) {
-            alert('✅ Trade processed & Customer Ledger updated!');
             await loadCustomers('', getSelectedMarket());
             await loadDashboardMetrics();
+            
+            // Open Receipt Photo WhatsApp modal immediately
             triggerWhatsApp(customerId);
 
+            // Reset inputs after modal opens
             document.querySelectorAll('#dynamicMarketInputs input').forEach(inp => inp.value = '0');
-            document.getElementById('pagarAmount').value = '0';
-            document.getElementById('farakAmount').value = '0';
+            if (document.getElementById('pagarAmount')) document.getElementById('pagarAmount').value = '0';
+            if (document.getElementById('farakAmount')) document.getElementById('farakAmount').value = '0';
             calculateMathPreview();
         } else {
-            alert('❌ Failed to process transaction.');
+            alert('❌ Failed to process trade transaction.');
         }
     } catch (err) {
         console.error('Error submitting trade:', err);
@@ -566,10 +568,25 @@ async function triggerWhatsApp(customerId) {
         const tradeStyleEl = document.getElementById('tradeReceiptStyle');
         let activeStyle = tradeStyleEl ? tradeStyleEl.value : (customer ? customer.receiptStyle : 'TYPE_1');
 
-        let sellPoNum = document.getElementById('sellPo') ? (parseFloat(document.getElementById('sellPo').value) || 0) : 0;
-        let sellPcNum = document.getElementById('sellPc') ? (parseFloat(document.getElementById('sellPc').value) || 0) : 0;
-        let payPoNum = document.getElementById('paymentPo') ? (parseFloat(document.getElementById('paymentPo').value) || 0) : 0;
-        let payPcNum = document.getElementById('paymentPc') ? (parseFloat(document.getElementById('paymentPc').value) || 0) : 0;
+        let sellPoNum = 0;
+        let sellPcNum = 0;
+        let payPoNum = 0;
+        let payPcNum = 0;
+
+        const marketInputs = document.querySelectorAll('#dynamicMarketInputs .market-input');
+        marketInputs.forEach(input => {
+            const val = parseFloat(input.value) || 0;
+            const code = input.getAttribute('data-session');
+            const type = input.getAttribute('data-type');
+            if (code === 'PO') {
+                if (type === 'sell') sellPoNum = val;
+                if (type === 'payment') payPoNum = val;
+            } else {
+                if (type === 'sell') sellPcNum += val;
+                if (type === 'payment') payPcNum += val;
+            }
+        });
+
         let yeneVal = document.getElementById('tradeYene') ? document.getElementById('tradeYene').value : '';
         let deneVal = document.getElementById('tradeDene') ? document.getElementById('tradeDene').value : '';
         let farakVal = document.getElementById('farakAmount') ? document.getElementById('farakAmount').value : '';
@@ -604,28 +621,31 @@ async function triggerWhatsApp(customerId) {
         const res = await fetch(url);
         const data = await res.json();
 
-        document.getElementById('waCustomerName').textContent = `${data.customerName} (${data.city})`;
-        document.getElementById('waMessageText').textContent = data.formattedMessage;
+        if (document.getElementById('waCustomerName')) {
+            document.getElementById('waCustomerName').textContent = `${data.customerName} (${data.city})`;
+        }
+        if (document.getElementById('waMessageText')) {
+            document.getElementById('waMessageText').textContent = data.formattedMessage;
+        }
 
         let cleanMobile = (data.mobileNumber || '').replace(/[^0-9]/g, '');
         if (cleanMobile.length === 10) {
             cleanMobile = '91' + cleanMobile;
         }
 
-        const encodedMsg = encodeURIComponent(data.formattedMessage);
-        
-        // Detect desktop vs mobile browser for direct chat opening with message pre-filled
+        currentCleanMobile = cleanMobile;
+        currentFormattedMessage = data.formattedMessage;
+
+        const encodedMsg = encodeURIComponent(data.formattedMessage || '');
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const waLink = isMobile
             ? `https://api.whatsapp.com/send?phone=${cleanMobile}&text=${encodedMsg}`
             : `https://web.whatsapp.com/send?phone=${cleanMobile}&text=${encodedMsg}`;
 
-        const btn = document.getElementById('btnOpenWhatsApp');
-        btn.href = waLink;
-        btn.onclick = function(e) {
-            e.preventDefault();
-            window.open(waLink, '_blank');
-        };
+        currentWaLink = waLink;
+
+        // Render HD Receipt Canvas Photo
+        renderReceiptImageCanvas(data.formattedMessage, data.customerName);
 
         openModal('whatsappModal');
     } catch (err) {
@@ -707,3 +727,254 @@ window.deleteCustomer = async function(id, name) {
         alert('❌ Error deleting customer.');
     }
 };
+
+// --- Receipt Photo (Image) Generation & Action Helpers ---
+let currentCustomerName = 'Customer';
+let currentCleanMobile = '';
+let currentWaLink = '';
+
+function renderReceiptImageCanvas(formattedMessage, customerName) {
+    currentCustomerName = customerName || 'Customer';
+    const canvas = document.getElementById('receiptCanvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const rawLines = formattedMessage ? formattedMessage.split('\n') : [];
+    
+    // Scale for high resolution (2x DPI)
+    const scale = 2;
+    const paddingX = 40 * scale;
+    const paddingY = 40 * scale;
+    const lineHeight = 38 * scale;
+    const fontSize = 21 * scale;
+    
+    const canvasWidth = 640 * scale;
+    const canvasHeight = paddingY * 2 + Math.max(1, rawLines.length) * lineHeight;
+
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+
+    // Fixed Column Coordinates for Pixel-Perfect Vertical Alignment
+    const labelX = paddingX;
+    const sellColX = 420 * scale; // Right-aligned SELL column
+    const payColX = 580 * scale;  // Right-aligned PAYMENT column
+
+    // Draw background card (Dark Teal gradient with rounded corners)
+    const cornerRadius = 24 * scale;
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    const grad = ctx.createLinearGradient(0, 0, 0, canvasHeight);
+    grad.addColorStop(0, '#044e45');
+    grad.addColorStop(1, '#023831');
+    
+    ctx.fillStyle = grad;
+    drawRoundedRect(ctx, 0, 0, canvasWidth, canvasHeight, cornerRadius);
+    ctx.fill();
+
+    // Glowing Neon Green Border
+    ctx.strokeStyle = '#20e39a';
+    ctx.lineWidth = 4 * scale;
+    drawRoundedRect(ctx, 2 * scale, 2 * scale, canvasWidth - 4 * scale, canvasHeight - 4 * scale, cornerRadius);
+    ctx.stroke();
+
+    // Set Font
+    ctx.font = `bold ${fontSize}px "Consolas", "Fira Code", "Courier New", monospace`;
+    ctx.textBaseline = 'middle';
+
+    let currentY = paddingY + lineHeight / 2;
+    let pendingMissPrefix = false;
+
+    rawLines.forEach((line) => {
+        const trimmed = line.trim();
+        let cleanText = line.replace(/\*/g, '').trim();
+
+        // 1. Divider line (---)
+        if (trimmed.startsWith('---') || trimmed.includes('-----')) {
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+            ctx.lineWidth = 2 * scale;
+            ctx.setLineDash([4 * scale, 4 * scale]);
+            ctx.moveTo(paddingX, currentY);
+            ctx.lineTo(canvasWidth - paddingX, currentY);
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset dash
+            currentY += lineHeight;
+        } 
+        // 2. Handle MISS header line (Combine with next PAYMENT row)
+        else if (cleanText === 'MISS') {
+            pendingMissPrefix = true;
+            return; // Skip drawing standalone MISS line
+        }
+        // 3. Table Header line (SELL  PAYMENT)
+        else if (cleanText.includes('SELL') && cleanText.includes('PAYMENT')) {
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'right';
+            ctx.fillText('SELL', sellColX, currentY);
+            ctx.fillText('PAYMENT', payColX, currentY);
+            currentY += lineHeight;
+        }
+        // 4. Date line
+        else if (cleanText.startsWith('Date:')) {
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'left';
+            ctx.fillText(cleanText, labelX, currentY);
+            currentY += lineHeight;
+        }
+        // 5. Centered City Header (e.g. KALYAN / PUNE / SOLAPUR)
+        else if (cleanText.length > 0 && !cleanText.includes(':-') && !cleanText.includes(':') && !/\d/.test(cleanText)) {
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.fillText(cleanText, canvasWidth / 2, currentY);
+            currentY += lineHeight;
+        }
+        // 6. Data & Amount Rows
+        else if (cleanText.length > 0) {
+            let hasRedDot = line.includes('🔴');
+            if (hasRedDot) {
+                cleanText = cleanText.replace(/🔴/g, '').trim();
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(labelX + 8 * scale, currentY, 7 * scale, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.fillStyle = '#ffffff';
+
+            const parts = cleanText.split(/:-|:/);
+            let label = parts[0] ? parts[0].trim() : '';
+
+            if (pendingMissPrefix) {
+                label = 'MISS ' + label;
+                pendingMissPrefix = false;
+            }
+
+            if (parts.length > 1 && label) {
+                // Draw Label on Left
+                ctx.textAlign = 'left';
+                const labelXOffset = hasRedDot ? (labelX + 24 * scale) : labelX;
+                ctx.fillText(label + ':-', labelXOffset, currentY);
+
+                // Extract numbers
+                const valStr = parts.slice(1).join(':-').trim();
+                const numbers = valStr.match(/[\d,]+(\s*(yeṇe|dene))?/gi) || [];
+
+                if (numbers.length >= 2) {
+                    ctx.textAlign = 'right';
+                    ctx.fillText(numbers[0].trim(), sellColX, currentY);
+                    ctx.fillText(numbers[1].trim(), payColX, currentY);
+                } else if (numbers.length === 1) {
+                    ctx.textAlign = 'right';
+                    ctx.fillText(numbers[0].trim(), sellColX, currentY);
+                }
+            } else {
+                // Standalone amount or text
+                const numbers = cleanText.match(/[\d,]+(\s*(yeṇe|dene))?/gi) || [];
+                if (numbers.length >= 1) {
+                    ctx.textAlign = 'right';
+                    ctx.fillText(numbers[0].trim(), sellColX, currentY);
+                } else {
+                    ctx.textAlign = 'left';
+                    ctx.fillText(cleanText, labelX, currentY);
+                }
+            }
+            currentY += lineHeight;
+        }
+    });
+}
+
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+}
+
+let currentFormattedMessage = '';
+
+// Direct 1-Click WhatsApp Photo Share to Customer Mobile Number
+async function shareReceiptPhotoToWhatsApp(targetMode) {
+    const canvas = document.getElementById('receiptCanvas');
+    if (!canvas) return;
+
+    // No text parameter so ONLY photo is shared/pasted
+    let targetUrl = `https://web.whatsapp.com/send?phone=${currentCleanMobile}`;
+
+    if (targetMode === 'api' || /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        targetUrl = `https://api.whatsapp.com/send?phone=${currentCleanMobile}`;
+    }
+
+    canvas.toBlob(async (blob) => {
+        if (!blob) {
+            alert('❌ Failed to generate receipt photo.');
+            return;
+        }
+
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const fileName = `Receipt_${(currentCustomerName || 'Customer').replace(/\s+/g, '_')}.png`;
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        // Mobile Native Web Share API
+        if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    title: `Receipt - ${currentCustomerName}`,
+                    text: `Receipt Statement for ${currentCustomerName}`,
+                    files: [file]
+                });
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+            }
+        }
+
+        // Desktop Clipboard Copy
+        try {
+            const item = new ClipboardItem({ 'image/png': blob });
+            await navigator.clipboard.write([item]);
+        } catch (clipErr) {
+            console.warn('Clipboard write error:', clipErr);
+            downloadReceiptPhoto();
+        }
+
+        alert(`🚀 Opening WhatsApp for ${currentCustomerName}!\n\n📋 Photo is copied to your clipboard — press Ctrl + V in the chat box to send!`);
+        window.open(targetUrl, '_blank');
+    });
+}
+
+function copyReceiptPhotoOnly() {
+    const canvas = document.getElementById('receiptCanvas');
+    if (!canvas) return;
+
+    try {
+        canvas.toBlob(async (blob) => {
+            if (!blob) return;
+            const item = new ClipboardItem({ 'image/png': blob });
+            await navigator.clipboard.write([item]);
+            alert('📋 Receipt photo copied to clipboard!');
+        });
+    } catch (err) {
+        downloadReceiptPhoto();
+    }
+}
+
+function downloadReceiptPhoto() {
+    const canvas = document.getElementById('receiptCanvas');
+    if (!canvas) return;
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = `Receipt_${(currentCustomerName || 'Customer').replace(/\s+/g, '_')}_${dateStr}.png`;
+    
+    const link = document.createElement('a');
+    link.download = fileName;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
+
+

@@ -273,21 +273,44 @@
 
     <!-- One-Click WhatsApp Statement Modal -->
     <div id="whatsappModal" class="modal-overlay">
-        <div class="modal-card">
+        <div class="modal-card" style="max-width: 540px;">
             <div class="modal-header">
-                <h3 class="modal-title">📱 One-Click WhatsApp Statement</h3>
+                <h3 class="modal-title">🖼️ Receipt Photo - WhatsApp</h3>
                 <button class="close-btn" onclick="closeModal('whatsappModal')">&times;</button>
             </div>
 
-            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">
-                Statement formatted for customer: <strong id="waCustomerName" style="color: #ffffff;">---</strong>
+            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                Statement formatted for: <strong id="waCustomerName" style="color: #ffffff;">---</strong>
             </p>
 
-            <div class="whatsapp-preview-box" id="waMessageText">Generating template...</div>
+            <div style="background: rgba(32, 227, 154, 0.1); border: 1px solid rgba(32, 227, 154, 0.3); padding: 0.6rem 0.8rem; border-radius: 0.75rem; font-size: 0.8rem; color: #a7f3d0; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>💡</span>
+                <span>Clicking below copies photo & opens chat. In WhatsApp Web, press <strong>Ctrl + V</strong> to send photo!</span>
+            </div>
 
-            <a id="btnOpenWhatsApp" href="#" target="_blank" class="btn-launch-wa">
-                🚀 Send Statement on WhatsApp
-            </a>
+            <!-- HD Receipt Canvas Photo Preview -->
+            <div class="receipt-canvas-wrapper">
+                <canvas id="receiptCanvas"></canvas>
+            </div>
+
+            <!-- Main Actions: Share Photo to WhatsApp Web & App -->
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <button id="btnSharePhotoWeb" class="btn-launch-wa" onclick="shareReceiptPhotoToWhatsApp('web')">
+                    🌐 Share Photo on WhatsApp Web
+                </button>
+                <button id="btnSharePhotoApp" class="btn-action" style="background: #059669; color: #ffffff; width: 100%; border-radius: 0.75rem; padding: 0.75rem; font-weight: 700;" onclick="shareReceiptPhotoToWhatsApp('api')">
+                    📱 Open WhatsApp Mobile / Desktop App
+                </button>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem;">
+                <button onclick="downloadReceiptPhoto()" style="background: none; border: none; color: #94a3b8; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+                    ⬇️ Download Photo (PNG)
+                </button>
+                <button onclick="copyReceiptPhotoOnly()" style="background: none; border: none; color: #94a3b8; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+                    📋 Copy Photo Only
+                </button>
+            </div>
         </div>
     </div>
 
