@@ -1,4 +1,17 @@
-// Pune Bazar Automatic WhatsApp Calculator & Ledger System Client JS
+function isCommEnabledForCustomer(customer) {
+    if (!customer) return false;
+    return customer.commissionEnabled === true || customer.commissionEnabled === 'true' || customer.commissionEnabled === 1;
+}
+
+function isPagarEnabledForCustomer(customer) {
+    if (!customer) return false;
+    return customer.pagarEnabled === true || customer.pagarEnabled === 'true' || customer.pagarEnabled === 1;
+}
+
+function isShareEnabledForCustomer(customer) {
+    if (!customer) return false;
+    return customer.shareRate != null && customer.shareRate > 0 && customer.shareRate < 100.0;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     // Set default date to today
@@ -34,35 +47,48 @@ document.addEventListener('DOMContentLoaded', () => {
             const customer = customersData.find(c => c.id == custId);
             if (customer) {
                 let style = (customer.receiptStyle || 'TYPE_3').trim().toUpperCase();
-                if (style === 'FARAK_SHARE' || style === 'TYPE1') style = 'TYPE_1';
-                else if (style === 'SIMPLE' || style === 'TYPE2') style = 'TYPE_2';
-                else if (style === 'STANDARD' || style === 'TYPE3') style = 'TYPE_3';
-                else if (style === 'TYPE4') style = 'TYPE_4';
-                else if (style === 'SHARE_PERCENT' || style === 'TYPE5') style = 'TYPE_5';
 
-                const tradeStyleEl = document.getElementById('tradeReceiptStyle');
-                if (tradeStyleEl) {
-                    tradeStyleEl.value = style;
-                }
-
-                document.getElementById('commPercent').value = customer.commissionRate != null ? customer.commissionRate : 10.0;
-                document.getElementById('shareRatePercent').value = customer.shareRate != null ? customer.shareRate : 40.0;
+                const isCommEnabled = isCommEnabledForCustomer(customer);
+                document.getElementById('commPercent').value = isCommEnabled ? (customer.commissionRate != null ? customer.commissionRate : 10.0) : 10.0;
+                
+                const isShareEnabled = isShareEnabledForCustomer(customer);
+                document.getElementById('shareRatePercent').value = isShareEnabled ? customer.shareRate : 100.0;
+                
                 document.getElementById('tradeYene').value = customer.yene != null ? customer.yene : (customer.previousBalance > 0 ? customer.previousBalance : 0);
                 document.getElementById('tradeDene').value = customer.dene != null ? customer.dene : (customer.previousBalance < 0 ? Math.abs(customer.previousBalance) : 0);
-                document.getElementById('pagarAmount').value = customer.pagar || 0;
+                
+                const isPagarEnabled = isPagarEnabledForCustomer(customer);
+                document.getElementById('pagarAmount').value = isPagarEnabled ? (customer.pagar || 0) : 0;
                 document.getElementById('farakAmount').value = customer.farak || 0;
+
+                const commGroup = document.getElementById('commGroup');
+                if (commGroup) commGroup.style.display = isCommEnabled ? 'block' : 'none';
+
+                const pagarGroup = document.getElementById('pagarGroup');
+                if (pagarGroup) pagarGroup.style.display = isPagarEnabled ? 'block' : 'none';
+
+                const shareGroup = document.getElementById('shareGroup');
+                if (shareGroup) shareGroup.style.display = isShareEnabled ? 'block' : 'none';
 
                 updateInputFieldsVisibility(style);
                 renderCustomerMarketInputs(customer.marketCodes || 'PO,PC');
             }
         } else {
-            document.getElementById('tradeReceiptStyle').value = 'TYPE_3';
             document.getElementById('commPercent').value = '10.00';
             document.getElementById('shareRatePercent').value = '40.00';
             document.getElementById('tradeYene').value = '0';
             document.getElementById('tradeDene').value = '0';
             document.getElementById('pagarAmount').value = '0';
             document.getElementById('farakAmount').value = '0';
+
+            const commGroup = document.getElementById('commGroup');
+            if (commGroup) commGroup.style.display = 'none';
+
+            const pagarGroup = document.getElementById('pagarGroup');
+            if (pagarGroup) pagarGroup.style.display = 'none';
+
+            const shareGroup = document.getElementById('shareGroup');
+            if (shareGroup) shareGroup.style.display = 'none';
 
             updateInputFieldsVisibility('TYPE_3');
             renderCustomerMarketInputs('PO,PC');
@@ -76,40 +102,47 @@ function updateInputFieldsVisibility(receiptStyle) {
     const farakGroup = document.getElementById('farakGroup');
     const pagarGroup = document.getElementById('pagarGroup');
 
-    const style = (receiptStyle || 'TYPE_3').toUpperCase();
+    const custId = document.getElementById('selectCustomer') ? document.getElementById('selectCustomer').value : '';
+    const customer = custId ? customersData.find(c => c.id == custId) : null;
+    const isCommEnabled = isCommEnabledForCustomer(customer);
+    const isPagarEnabled = isPagarEnabledForCustomer(customer);
+    const isShareEnabled = isShareEnabledForCustomer(customer);
 
-    if (style === 'TYPE_2' || style === 'SIMPLE') {
-        if (commGroup) commGroup.style.display = 'none';
-        if (shareGroup) shareGroup.style.display = 'none';
-        if (farakGroup) farakGroup.style.display = 'none';
-        if (pagarGroup) pagarGroup.style.display = 'none';
-    } else if (style === 'TYPE_5' || style === 'SHARE_PERCENT') {
-        if (commGroup) commGroup.style.display = 'block';
-        if (shareGroup) shareGroup.style.display = 'block';
-        if (farakGroup) farakGroup.style.display = 'none';
-        if (pagarGroup) pagarGroup.style.display = 'none';
-    } else if (style === 'TYPE_1' || style === 'FARAK_SHARE') {
-        if (commGroup) commGroup.style.display = 'block';
-        if (shareGroup) shareGroup.style.display = 'block';
-        if (farakGroup) farakGroup.style.display = 'block';
-        if (pagarGroup) pagarGroup.style.display = 'none';
-    } else if (style === 'TYPE_4') {
-        if (commGroup) commGroup.style.display = 'none';
-        if (shareGroup) shareGroup.style.display = 'none';
-        if (farakGroup) farakGroup.style.display = 'none';
-        if (pagarGroup) pagarGroup.style.display = 'block';
-    } else {
-        // TYPE_3 or STANDARD
-        if (commGroup) commGroup.style.display = 'block';
-        if (shareGroup) shareGroup.style.display = 'none';
-        if (farakGroup) farakGroup.style.display = 'none';
-        if (pagarGroup) pagarGroup.style.display = 'block';
-    }
+    if (commGroup) commGroup.style.display = isCommEnabled ? 'block' : 'none';
+    if (pagarGroup) pagarGroup.style.display = isPagarEnabled ? 'block' : 'none';
+    if (shareGroup) shareGroup.style.display = isShareEnabled ? 'block' : 'none';
 }
 
-    // Form Submissions
-    document.getElementById('tradeForm').addEventListener('submit', handleTradeSubmit);
+    document.getElementById('tradeForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        processTradeAction('save');
+    });
     document.getElementById('newCustomerForm').addEventListener('submit', handleNewCustomerSubmit);
+
+    // Modal checkbox toggle listeners
+    const custCommCheckbox = document.getElementById('custEnableComm');
+    if (custCommCheckbox) {
+        custCommCheckbox.addEventListener('change', (e) => {
+            const container = document.getElementById('custCommContainer');
+            if (container) container.style.display = e.target.checked ? 'block' : 'none';
+        });
+    }
+
+    const custPagarCheckbox = document.getElementById('custEnablePagar');
+    if (custPagarCheckbox) {
+        custPagarCheckbox.addEventListener('change', (e) => {
+            const container = document.getElementById('custPagarContainer');
+            if (container) container.style.display = e.target.checked ? 'block' : 'none';
+        });
+    }
+
+    const custShareCheckbox = document.getElementById('custShare4060');
+    if (custShareCheckbox) {
+        custShareCheckbox.addEventListener('change', (e) => {
+            const container = document.getElementById('custShareRateContainer');
+            if (container) container.style.display = e.target.checked ? 'block' : 'none';
+        });
+    }
 
     // Search and Market Filter Chips
     document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -127,6 +160,23 @@ function updateInputFieldsVisibility(receiptStyle) {
 
     // New Customer Modal Open
     document.getElementById('btnNewCustomerModal').addEventListener('click', () => {
+        if (document.getElementById('editingCustId')) document.getElementById('editingCustId').value = '';
+        if (document.getElementById('custModalTitle')) document.getElementById('custModalTitle').textContent = '➕ Add New Market Customer';
+        if (document.getElementById('btnSaveCust')) document.getElementById('btnSaveCust').textContent = '💾 Save Customer Profile';
+        document.getElementById('newCustomerForm').reset();
+
+        if (document.getElementById('custEnableComm')) document.getElementById('custEnableComm').checked = false;
+        if (document.getElementById('custCommission')) document.getElementById('custCommission').value = '10.00';
+        if (document.getElementById('custCommContainer')) document.getElementById('custCommContainer').style.display = 'none';
+
+        if (document.getElementById('custEnablePagar')) document.getElementById('custEnablePagar').checked = false;
+        if (document.getElementById('custPagar')) document.getElementById('custPagar').value = '0.00';
+        if (document.getElementById('custPagarContainer')) document.getElementById('custPagarContainer').style.display = 'none';
+
+        if (document.getElementById('custShare4060')) document.getElementById('custShare4060').checked = false;
+        if (document.getElementById('custShareRateVal')) document.getElementById('custShareRateVal').value = '40.00';
+        if (document.getElementById('custShareRateContainer')) document.getElementById('custShareRateContainer').style.display = 'none';
+
         openModal('customerModal');
     });
 
@@ -261,22 +311,25 @@ function renderCustomerTable(list) {
     list.forEach(c => {
         const tr = document.createElement('tr');
         const balColor = c.previousBalance > 0 ? '#fca5a5' : '#34d399';
+        const cityDisplay = c.city || c.marketZone || 'General';
+        const mobileDisplay = c.mobileNumber && c.mobileNumber.trim() ? `📱 ${escapeHtml(c.mobileNumber)}` : '-';
+        const subInfo = (c.marketZone || c.city) ? `${escapeHtml(c.marketZone || c.city)} • (${escapeHtml(c.marketCodes || 'PO,PC')})` : `(${escapeHtml(c.marketCodes || 'PO,PC')})`;
 
         tr.innerHTML = `
             <td>
                 <strong style="color: #ffffff;">${escapeHtml(c.name)}</strong>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(c.marketZone || c.city)} • (${escapeHtml(c.marketCodes || 'PO,PC')})</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">${subInfo}</div>
             </td>
-            <td><span class="chip" style="margin: 0;">${escapeHtml(c.city)}</span></td>
-            <td>📱 ${escapeHtml(c.mobileNumber)}</td>
+            <td><span class="chip" style="margin: 0;">${escapeHtml(cityDisplay)}</span></td>
+            <td>${mobileDisplay}</td>
             <td style="font-weight: 800; color: ${balColor};">₹${c.previousBalance.toFixed(2)}</td>
             <td>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <button onclick="triggerWhatsApp(${c.id})" class="btn-whatsapp">
                         <span>📲 WhatsApp</span>
                     </button>
-                    <button onclick="viewHistory(${c.id}, '${escapeHtml(c.name)}')" class="chip" style="margin:0;">
-                        📜 History
+                    <button onclick="editCustomer(${c.id})" class="chip" style="margin:0; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">
+                        ✏️ Edit
                     </button>
                     <button onclick="deleteCustomer(${c.id}, '${escapeHtml(c.name)}')" class="chip" style="margin:0; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">
                         🗑️ Delete
@@ -288,12 +341,44 @@ function renderCustomerTable(list) {
     });
 }
 
+window.editCustomer = function(id) {
+    const customer = customersData.find(c => c.id == id);
+    if (!customer) return;
+
+    if (document.getElementById('editingCustId')) document.getElementById('editingCustId').value = customer.id;
+    if (document.getElementById('custModalTitle')) document.getElementById('custModalTitle').textContent = `✏️ Edit Customer (${customer.name})`;
+    if (document.getElementById('btnSaveCust')) document.getElementById('btnSaveCust').textContent = '💾 Update Customer Profile';
+
+    if (document.getElementById('custName')) document.getElementById('custName').value = customer.name || '';
+    
+    const isCommEnabled = isCommEnabledForCustomer(customer);
+    if (document.getElementById('custEnableComm')) document.getElementById('custEnableComm').checked = isCommEnabled;
+    if (document.getElementById('custCommission')) document.getElementById('custCommission').value = customer.commissionRate != null ? customer.commissionRate : 10.0;
+    if (document.getElementById('custCommContainer')) document.getElementById('custCommContainer').style.display = isCommEnabled ? 'block' : 'none';
+
+    const isPagarEnabled = isPagarEnabledForCustomer(customer);
+    if (document.getElementById('custEnablePagar')) document.getElementById('custEnablePagar').checked = isPagarEnabled;
+    if (document.getElementById('custPagar')) document.getElementById('custPagar').value = customer.pagar != null ? customer.pagar : 0.0;
+    if (document.getElementById('custPagarContainer')) document.getElementById('custPagarContainer').style.display = isPagarEnabled ? 'block' : 'none';
+
+    const isShareEnabled = isShareEnabledForCustomer(customer);
+    if (document.getElementById('custShare4060')) {
+        document.getElementById('custShare4060').checked = isShareEnabled;
+    }
+    if (document.getElementById('custShareRateVal')) {
+        document.getElementById('custShareRateVal').value = isShareEnabled ? customer.shareRate : 40.0;
+    }
+    if (document.getElementById('custShareRateContainer')) {
+        document.getElementById('custShareRateContainer').style.display = isShareEnabled ? 'block' : 'none';
+    }
+
+    openModal('customerModal');
+};
+
 // 4. Live Calculation Engine Math Logic
 function calculateMathPreview() {
     const custId = document.getElementById('selectCustomer').value;
     const customer = custId ? customersData.find(c => c.id == custId) : null;
-    const styleEl = document.getElementById('tradeReceiptStyle');
-    const receiptStyle = styleEl && styleEl.value ? styleEl.value : (customer && customer.receiptStyle ? customer.receiptStyle : 'TYPE_3');
 
     let totalSell = 0;
     let totalPayment = 0;
@@ -324,9 +409,16 @@ function calculateMathPreview() {
 
     const openingNet = yeneVal - deneVal;
 
-    const commCut = (totalSell * commRate) / 100.0;
+    const isCommEnabled = isCommEnabledForCustomer(customer);
+    const isPagarEnabled = isPagarEnabledForCustomer(customer);
+    const isShareEnabled = isShareEnabledForCustomer(customer);
+
+    const actualCommRate = isCommEnabled ? commRate : 0;
+    const commCut = (totalSell * actualCommRate) / 100.0;
     const totalAfterComm = totalSell - commCut;
     const afterPay = totalAfterComm - totalPayment;
+
+    const actualPagarVal = isPagarEnabled ? pagarVal : 0;
 
     let netBalance = 0;
     let shareAmount = 0;
@@ -338,51 +430,19 @@ function calculateMathPreview() {
     const rowShare = document.getElementById('previewShareRow');
     const rowPagar = document.getElementById('previewPagarRow');
 
-    if (receiptStyle === 'TYPE_2' || receiptStyle === 'SIMPLE') {
-        if (rowComi) rowComi.style.display = 'none';
-        if (rowAfterComm) rowAfterComm.style.display = 'none';
-        if (rowFarak) rowFarak.style.display = 'none';
-        if (rowShare) rowShare.style.display = 'none';
-        if (rowPagar) rowPagar.style.display = 'none';
+    if (rowComi) rowComi.style.display = isCommEnabled ? 'flex' : 'none';
+    if (rowAfterComm) rowAfterComm.style.display = isCommEnabled ? 'flex' : 'none';
+    if (rowPayment) rowPayment.style.display = 'flex';
+    if (rowFarak) rowFarak.style.display = farakVal !== 0 ? 'flex' : 'none';
+    if (rowShare) rowShare.style.display = isShareEnabled ? 'flex' : 'none';
+    if (rowPagar) rowPagar.style.display = isPagarEnabled ? 'flex' : 'none';
 
-        netBalance = (totalSell - totalPayment) + openingNet;
-    } else if (receiptStyle === 'TYPE_5' || receiptStyle === 'SHARE_PERCENT') {
-        if (rowComi) rowComi.style.display = 'flex';
-        if (rowAfterComm) rowAfterComm.style.display = 'flex';
-        if (rowFarak) rowFarak.style.display = 'none';
-        if (rowShare) rowShare.style.display = 'flex';
-        if (rowPagar) rowPagar.style.display = 'none';
-
-        shareAmount = (afterPay * shareRate) / 100.0;
-        netBalance = shareAmount + openingNet;
-    } else if (receiptStyle === 'TYPE_1' || receiptStyle === 'FARAK_SHARE') {
-        if (rowComi) rowComi.style.display = 'flex';
-        if (rowAfterComm) rowAfterComm.style.display = 'flex';
-        if (rowFarak) rowFarak.style.display = 'flex';
-        if (rowShare) rowShare.style.display = 'flex';
-        if (rowPagar) rowPagar.style.display = 'none';
-
+    if (isShareEnabled) {
         const afterFarak = afterPay - farakVal;
         shareAmount = (afterFarak * shareRate) / 100.0;
-        netBalance = shareAmount + openingNet;
-    } else if (receiptStyle === 'TYPE_4') {
-        if (rowComi) rowComi.style.display = 'none';
-        if (rowAfterComm) rowAfterComm.style.display = 'none';
-        if (rowFarak) rowFarak.style.display = 'none';
-        if (rowShare) rowShare.style.display = 'none';
-        if (rowPagar) rowPagar.style.display = 'flex';
-
-        const afterPayDirect = totalSell - totalPayment;
-        netBalance = (afterPayDirect - pagarVal) + openingNet;
+        netBalance = (shareAmount - actualPagarVal) + openingNet;
     } else {
-        // TYPE_3 or STANDARD
-        if (rowComi) rowComi.style.display = 'flex';
-        if (rowAfterComm) rowAfterComm.style.display = 'flex';
-        if (rowFarak) rowFarak.style.display = 'none';
-        if (rowShare) rowShare.style.display = 'none';
-        if (rowPagar) rowPagar.style.display = 'flex';
-
-        netBalance = (afterPay - pagarVal) + openingNet;
+        netBalance = (afterPay - actualPagarVal) + openingNet;
     }
 
     if (document.getElementById('previewTotalSell')) document.getElementById('previewTotalSell').textContent = formatCurrency(totalSell);
@@ -400,7 +460,7 @@ function calculateMathPreview() {
     if (document.getElementById('previewDene')) document.getElementById('previewDene').textContent = `-` + formatCurrency(deneVal);
 
     if (document.getElementById('previewFarak')) document.getElementById('previewFarak').textContent = (farakVal >= 0 ? `+` : ``) + formatCurrency(farakVal);
-    if (document.getElementById('previewPagarAmount')) document.getElementById('previewPagarAmount').textContent = `-` + formatCurrency(pagarVal);
+    if (document.getElementById('previewPagarAmount')) document.getElementById('previewPagarAmount').textContent = `-` + formatCurrency(actualPagarVal);
     
     const netText = netBalance >= 0 ? formatCurrency(netBalance) + ' (येणे)' : '-' + formatCurrency(Math.abs(netBalance)) + ' (देणे)';
     const netColor = netBalance >= 0 ? '#fbbf24' : '#f87171';
@@ -411,13 +471,11 @@ function calculateMathPreview() {
     }
 }
 
-// 5. Handle Trade Form Submission
-async function handleTradeSubmit(e) {
-    e.preventDefault();
-
-    const customerId = document.getElementById('selectCustomer').value;
+// 5. Handle Trade Form Actions (Save & Download vs Share to WhatsApp)
+window.processTradeAction = async function(actionType) {
+    const customerId = document.getElementById('selectCustomer') ? document.getElementById('selectCustomer').value : '';
     if (!customerId) {
-        alert('Please select a customer first!');
+        alert('⚠️ Please select a customer / trader first!');
         return;
     }
 
@@ -446,6 +504,11 @@ async function handleTradeSubmit(e) {
     const magilBaki = yeneVal - deneVal;
     const pagarAmount = parseFloat(document.getElementById('pagarAmount').value) || 0;
     const farakAmount = parseFloat(document.getElementById('farakAmount').value) || 0;
+    const styleEl = document.getElementById('tradeReceiptStyle');
+
+    const customerObj = customersData ? customersData.find(c => c.id == customerId) : null;
+    const isShareEnabled = isShareEnabledForCustomer(customerObj);
+    const effectiveShareRate = isShareEnabled ? (parseFloat(document.getElementById('shareRatePercent').value) || 40.0) : 100.0;
 
     const payload = {
         customerId: parseInt(customerId),
@@ -457,8 +520,8 @@ async function handleTradeSubmit(e) {
         magilBaki: magilBaki,
         pagarAmount: pagarAmount,
         farak: farakAmount,
-        receiptStyle: document.getElementById('tradeReceiptStyle').value || 'TYPE_3',
-        shareRate: parseFloat(document.getElementById('shareRatePercent').value) || 40.0,
+        receiptStyle: styleEl && styleEl.value ? styleEl.value : 'TYPE_1',
+        shareRate: effectiveShareRate,
         rate: 1.0,
         commissionPercentage: parseFloat(document.getElementById('commPercent').value) || 10.0,
         paymentAmount: paymentPo + paymentPc,
@@ -477,10 +540,18 @@ async function handleTradeSubmit(e) {
             await loadCustomers('', getSelectedMarket());
             await loadDashboardMetrics();
             
-            // Open Receipt Photo WhatsApp modal immediately
-            triggerWhatsApp(customerId);
+            if (actionType === 'save') {
+                // Generate receipt statement data & canvas image
+                await triggerWhatsApp(customerId, false);
+                // Download receipt photo image onto user's device
+                downloadReceiptPhoto();
+                alert('✅ Trade Saved to Ledger & Receipt Downloaded Successfully!');
+            } else if (actionType === 'share') {
+                // Generate receipt statement & launch WhatsApp Web/App directly
+                await triggerWhatsApp(customerId, true);
+            }
 
-            // Reset inputs after modal opens
+            // Reset market input fields after save/share
             document.querySelectorAll('#dynamicMarketInputs input').forEach(inp => inp.value = '0');
             if (document.getElementById('pagarAmount')) document.getElementById('pagarAmount').value = '0';
             if (document.getElementById('farakAmount')) document.getElementById('farakAmount').value = '0';
@@ -491,53 +562,70 @@ async function handleTradeSubmit(e) {
     } catch (err) {
         console.error('Error submitting trade:', err);
     }
-}
+};
 
-// 6. Add New Customer
+// 6. Add / Edit Customer
 async function handleNewCustomerSubmit(e) {
     e.preventDefault();
 
-    const yeneEl = document.getElementById('custYene');
-    const deneEl = document.getElementById('custDene');
-    const shareEl = document.getElementById('custShareRate');
-    const farakEl = document.getElementById('custFarak');
+    const editingId = document.getElementById('editingCustId') ? document.getElementById('editingCustId').value : '';
+    const isEdit = Boolean(editingId);
 
-    const yeneVal = yeneEl ? (parseFloat(yeneEl.value) || 0) : 0;
-    const deneVal = deneEl ? (parseFloat(deneEl.value) || 0) : 0;
+    const nameVal = document.getElementById('custName') ? document.getElementById('custName').value : '';
+    const isCommEnabledChecked = document.getElementById('custEnableComm') ? document.getElementById('custEnableComm').checked : false;
+    const commVal = document.getElementById('custCommission') ? (parseFloat(document.getElementById('custCommission').value) || 10.0) : 10.0;
 
-    const selectedStyle = document.getElementById('custReceiptStyle').value || 'TYPE_1';
+    const isPagarEnabledChecked = document.getElementById('custEnablePagar') ? document.getElementById('custEnablePagar').checked : false;
+    const pagarVal = document.getElementById('custPagar') ? (parseFloat(document.getElementById('custPagar').value) || 0) : 0;
 
-    const pagarEl = document.getElementById('custPagar');
-    const pagarVal = pagarEl ? (parseFloat(pagarEl.value) || 0) : 0;
+    const isShare4060Checked = document.getElementById('custShare4060') ? document.getElementById('custShare4060').checked : false;
+    const customShareRate = document.getElementById('custShareRateVal') ? (parseFloat(document.getElementById('custShareRateVal').value) || 40.0) : 40.0;
+    const shareRateVal = isShare4060Checked ? customShareRate : 100.0;
 
     const payload = {
-        name: document.getElementById('custName').value,
-        mobileNumber: document.getElementById('custMobile').value,
-        city: document.getElementById('custCity').value,
-        receiptStyle: selectedStyle,
-        shareRate: shareEl ? (parseFloat(shareEl.value) || 40.0) : 40.0,
-        commissionPercentage: parseFloat(document.getElementById('custCommission').value) || 10.0,
+        name: nameVal,
+        mobileNumber: '',
+        city: '',
+        receiptStyle: 'TYPE_1',
+        shareRate: shareRateVal,
+        commissionPercentage: commVal,
+        commissionEnabled: isCommEnabledChecked,
         pagar: pagarVal,
-        yene: yeneVal,
-        dene: deneVal,
-        farak: farakEl ? (parseFloat(farakEl.value) || 0) : 0,
+        pagarEnabled: isPagarEnabledChecked,
+        yene: 0,
+        dene: 0,
+        farak: 0,
         marketCodes: 'PO,PC'
     };
 
     try {
-        const res = await fetch('/api/customers', {
-            method: 'POST',
+        const url = isEdit ? `/api/customers/${editingId}` : '/api/customers';
+        const method = isEdit ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
         if (res.ok) {
             const savedCustomer = await res.json();
-            alert('✅ Customer Profile Saved Successfully!');
+            alert(isEdit ? '✅ Customer Profile Updated Successfully!' : '✅ Customer Profile Saved Successfully!');
             closeModal('customerModal');
             document.getElementById('newCustomerForm').reset();
+            if (document.getElementById('editingCustId')) document.getElementById('editingCustId').value = '';
+
+            if (document.getElementById('custEnableComm')) document.getElementById('custEnableComm').checked = false;
             if (document.getElementById('custCommission')) document.getElementById('custCommission').value = '10.00';
+            if (document.getElementById('custCommContainer')) document.getElementById('custCommContainer').style.display = 'none';
+
+            if (document.getElementById('custEnablePagar')) document.getElementById('custEnablePagar').checked = false;
             if (document.getElementById('custPagar')) document.getElementById('custPagar').value = '0.00';
+            if (document.getElementById('custPagarContainer')) document.getElementById('custPagarContainer').style.display = 'none';
+
+            if (document.getElementById('custShare4060')) document.getElementById('custShare4060').checked = false;
+            if (document.getElementById('custShareRateVal')) document.getElementById('custShareRateVal').value = '40.00';
+            if (document.getElementById('custShareRateContainer')) document.getElementById('custShareRateContainer').style.display = 'none';
 
             await loadCustomers('', getSelectedMarket());
             await loadDashboardMetrics();
@@ -548,15 +636,15 @@ async function handleNewCustomerSubmit(e) {
                 selectEl.dispatchEvent(new Event('change'));
             }
         } else {
-            alert('❌ Failed to save customer profile.');
+            alert(isEdit ? '❌ Failed to update customer profile.' : '❌ Failed to save customer profile.');
         }
     } catch (err) {
-        console.error('Error creating customer:', err);
+        console.error('Error saving/updating customer:', err);
     }
 }
 
 // 7. One-Click WhatsApp Statement Generator
-async function triggerWhatsApp(customerId) {
+async function triggerWhatsApp(customerId, autoShare = false) {
     try {
         const selectedCustId = document.getElementById('selectCustomer') ? document.getElementById('selectCustomer').value : '';
         if (!customerId && selectedCustId) {
@@ -638,9 +726,9 @@ async function triggerWhatsApp(customerId) {
 
         const encodedMsg = encodeURIComponent(data.formattedMessage || '');
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const waLink = isMobile
-            ? `https://api.whatsapp.com/send?phone=${cleanMobile}&text=${encodedMsg}`
-            : `https://web.whatsapp.com/send?phone=${cleanMobile}&text=${encodedMsg}`;
+        const waLink = cleanMobile 
+            ? (isMobile ? `https://api.whatsapp.com/send?phone=${cleanMobile}&text=${encodedMsg}` : `https://web.whatsapp.com/send?phone=${cleanMobile}&text=${encodedMsg}`)
+            : (isMobile ? `https://api.whatsapp.com/send` : `https://web.whatsapp.com`);
 
         currentWaLink = waLink;
 
@@ -648,6 +736,12 @@ async function triggerWhatsApp(customerId) {
         renderReceiptImageCanvas(data.formattedMessage, data.customerName);
 
         openModal('whatsappModal');
+
+        if (autoShare) {
+            setTimeout(() => {
+                shareReceiptPhotoToWhatsApp('web');
+            }, 300);
+        }
     } catch (err) {
         console.error('Error generating WhatsApp statement:', err);
     }
@@ -740,105 +834,44 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
 
     const ctx = canvas.getContext('2d');
     const rawLines = formattedMessage ? formattedMessage.split('\n') : [];
+
+    const scale = 2; // High DPI 2x
+    const canvasWidth = 560 * scale;
+    const paddingX = 28 * scale;
     
-    // Scale for high resolution (2x DPI)
-    const scale = 2;
-    const paddingX = 40 * scale;
-    const paddingY = 40 * scale;
-    const lineHeight = 38 * scale;
-    const fontSize = 21 * scale;
-    
-    const canvasWidth = 640 * scale;
-    const canvasHeight = paddingY * 2 + Math.max(1, rawLines.length) * lineHeight;
+    // Parse message into structured header & data rows
+    let dateStr = new Date().toLocaleDateString('en-GB'); // default dd/mm/yyyy
+    let cityTitle = 'PUNE';
+    let totalBalanceStr = '';
 
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-
-    // Fixed Column Coordinates for Pixel-Perfect Vertical Alignment
-    const labelX = paddingX;
-    const sellColX = 420 * scale; // Right-aligned SELL column
-    const payColX = 580 * scale;  // Right-aligned PAYMENT column
-
-    // Draw background card (Dark Teal gradient with rounded corners)
-    const cornerRadius = 24 * scale;
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-
-    const grad = ctx.createLinearGradient(0, 0, 0, canvasHeight);
-    grad.addColorStop(0, '#044e45');
-    grad.addColorStop(1, '#023831');
-    
-    ctx.fillStyle = grad;
-    drawRoundedRect(ctx, 0, 0, canvasWidth, canvasHeight, cornerRadius);
-    ctx.fill();
-
-    // Glowing Neon Green Border
-    ctx.strokeStyle = '#20e39a';
-    ctx.lineWidth = 4 * scale;
-    drawRoundedRect(ctx, 2 * scale, 2 * scale, canvasWidth - 4 * scale, canvasHeight - 4 * scale, cornerRadius);
-    ctx.stroke();
-
-    // Set Font
-    ctx.font = `bold ${fontSize}px "Consolas", "Fira Code", "Courier New", monospace`;
-    ctx.textBaseline = 'middle';
-
-    let currentY = paddingY + lineHeight / 2;
+    const parsedRows = [];
     let pendingMissPrefix = false;
 
-    rawLines.forEach((line) => {
+    rawLines.forEach(line => {
         const trimmed = line.trim();
         let cleanText = line.replace(/\*/g, '').trim();
 
-        // 1. Divider line (---)
-        if (trimmed.startsWith('---') || trimmed.includes('-----')) {
-            ctx.beginPath();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-            ctx.lineWidth = 2 * scale;
-            ctx.setLineDash([4 * scale, 4 * scale]);
-            ctx.moveTo(paddingX, currentY);
-            ctx.lineTo(canvasWidth - paddingX, currentY);
-            ctx.stroke();
-            ctx.setLineDash([]); // Reset dash
-            currentY += lineHeight;
-        } 
-        // 2. Handle MISS header line (Combine with next PAYMENT row)
-        else if (cleanText === 'MISS') {
-            pendingMissPrefix = true;
-            return; // Skip drawing standalone MISS line
-        }
-        // 3. Table Header line (SELL  PAYMENT)
-        else if (cleanText.includes('SELL') && cleanText.includes('PAYMENT')) {
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'right';
-            ctx.fillText('SELL', sellColX, currentY);
-            ctx.fillText('PAYMENT', payColX, currentY);
-            currentY += lineHeight;
-        }
-        // 4. Date line
-        else if (cleanText.startsWith('Date:')) {
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'left';
-            ctx.fillText(cleanText, labelX, currentY);
-            currentY += lineHeight;
-        }
-        // 5. Centered City Header (e.g. KALYAN / PUNE / SOLAPUR)
-        else if (cleanText.length > 0 && !cleanText.includes(':-') && !cleanText.includes(':') && !/\d/.test(cleanText)) {
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.fillText(cleanText, canvasWidth / 2, currentY);
-            currentY += lineHeight;
-        }
-        // 6. Data & Amount Rows
-        else if (cleanText.length > 0) {
-            let hasRedDot = line.includes('🔴');
-            if (hasRedDot) {
-                cleanText = cleanText.replace(/🔴/g, '').trim();
-                ctx.fillStyle = '#ef4444';
-                ctx.beginPath();
-                ctx.arc(labelX + 8 * scale, currentY, 7 * scale, 0, Math.PI * 2);
-                ctx.fill();
+        if (cleanText.startsWith('Date:')) {
+            const match = cleanText.match(/Date:\s*([^\s*]+)/i);
+            if (match && match[1]) dateStr = match[1];
+        } else if (trimmed.startsWith('---') || trimmed.includes('-----') || trimmed.startsWith('___') || trimmed.includes('____')) {
+            if (parsedRows.length > 0 && parsedRows[parsedRows.length - 1].type !== 'divider') {
+                parsedRows.push({ type: 'divider' });
             }
-
-            ctx.fillStyle = '#ffffff';
+        } else if (cleanText.length > 0 && !cleanText.includes(':-') && !cleanText.includes(':') && !/\d/.test(cleanText) && !cleanText.includes('SELL')) {
+            cityTitle = cleanText.toUpperCase();
+        } else if (cleanText === 'MISS') {
+            pendingMissPrefix = true;
+        } else if (cleanText.includes('TOTAL BALANCE DUE')) {
+            const parts = cleanText.split(/:-|:/);
+            if (parts.length > 1) {
+                totalBalanceStr = parts[1].trim();
+            } else {
+                totalBalanceStr = cleanText.replace('TOTAL BALANCE DUE', '').trim();
+            }
+        } else if (cleanText.length > 0 && !cleanText.includes('SELL')) {
+            let isMagil = line.includes('🔴') || cleanText.includes('MAGIL');
+            cleanText = cleanText.replace(/🔴/g, '').trim();
 
             const parts = cleanText.split(/:-|:/);
             let label = parts[0] ? parts[0].trim() : '';
@@ -848,38 +881,233 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
                 pendingMissPrefix = false;
             }
 
-            if (parts.length > 1 && label) {
-                // Draw Label on Left
-                ctx.textAlign = 'left';
-                const labelXOffset = hasRedDot ? (labelX + 24 * scale) : labelX;
-                ctx.fillText(label + ':-', labelXOffset, currentY);
+            let isHighlight = label.startsWith('TOTAL') || label.startsWith('REMAINING');
 
-                // Extract numbers
+            let sellVal = '';
+            let payVal = '';
+
+            if (parts.length > 1) {
                 const valStr = parts.slice(1).join(':-').trim();
-                const numbers = valStr.match(/[\d,]+(\s*(yeṇe|dene))?/gi) || [];
+                const numbers = valStr.match(/[\d,]+(\s*(yeṇe|dene|yeṇe|dene|yene))?/gi) || [];
 
                 if (numbers.length >= 2) {
-                    ctx.textAlign = 'right';
-                    ctx.fillText(numbers[0].trim(), sellColX, currentY);
-                    ctx.fillText(numbers[1].trim(), payColX, currentY);
+                    sellVal = numbers[0].trim();
+                    payVal = numbers[1].trim();
                 } else if (numbers.length === 1) {
-                    ctx.textAlign = 'right';
-                    ctx.fillText(numbers[0].trim(), sellColX, currentY);
-                }
-            } else {
-                // Standalone amount or text
-                const numbers = cleanText.match(/[\d,]+(\s*(yeṇe|dene))?/gi) || [];
-                if (numbers.length >= 1) {
-                    ctx.textAlign = 'right';
-                    ctx.fillText(numbers[0].trim(), sellColX, currentY);
-                } else {
-                    ctx.textAlign = 'left';
-                    ctx.fillText(cleanText, labelX, currentY);
+                    sellVal = numbers[0].trim();
                 }
             }
-            currentY += lineHeight;
+
+            parsedRows.push({
+                type: isHighlight ? 'highlight_row' : (isMagil ? 'magil_row' : 'row'),
+                label: label ? label + ' :-' : '',
+                sellVal: sellVal,
+                payVal: payVal,
+                isHighlight: isHighlight,
+                isMagil: isMagil
+            });
         }
     });
+
+    if (!totalBalanceStr) {
+        for (let i = parsedRows.length - 1; i >= 0; i--) {
+            const r = parsedRows[i];
+            if (r.type !== 'divider' && r.sellVal && (r.sellVal.includes('yeṇe') || r.sellVal.includes('dene') || r.sellVal.includes('yene') || r.isHighlight)) {
+                totalBalanceStr = r.sellVal;
+                break;
+            }
+        }
+    }
+
+    const fontStack = '"Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif';
+
+    // Compute dynamic canvas height
+    const headerHeight = 110 * scale;
+    const colHeaderHeight = 48 * scale;
+    const rowHeight = 42 * scale;
+    const bottomBannerHeight = 100 * scale;
+    
+    let contentRowsCount = 0;
+    parsedRows.forEach(r => {
+        if (r.type === 'divider') contentRowsCount += 0.5;
+        else contentRowsCount += 1;
+    });
+
+    const canvasHeight = Math.ceil(headerHeight + colHeaderHeight + (contentRowsCount * rowHeight) + bottomBannerHeight + (35 * scale));
+
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+
+    const cornerRadius = 20 * scale;
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    // 1. White Card Background
+    ctx.fillStyle = '#ffffff';
+    drawRoundedRect(ctx, 0, 0, canvasWidth, canvasHeight, cornerRadius);
+    ctx.fill();
+
+    // 2. Outer Cyan/Blue Border (#0284c7)
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 4 * scale;
+    drawRoundedRect(ctx, 2 * scale, 2 * scale, canvasWidth - 4 * scale, canvasHeight - 4 * scale, cornerRadius);
+    ctx.stroke();
+
+    // 3. Top Dark Navy Header Box (#0f172a)
+    ctx.save();
+    ctx.beginPath();
+    drawRoundedRect(ctx, 2 * scale, 2 * scale, canvasWidth - 4 * scale, headerHeight, cornerRadius);
+    ctx.clip();
+
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, canvasWidth, headerHeight + cornerRadius);
+
+    // City Title & Customer Name Header
+    let displayHeaderTitle = (currentCustomerName && currentCustomerName !== 'Customer') ? currentCustomerName.toUpperCase() : (cityTitle || 'CUSTOMER STATEMENT');
+
+    // City Title (Centered Extra-Bold Light Blue #38bdf8)
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = `900 ${26 * scale}px ${fontStack}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(displayHeaderTitle, canvasWidth / 2, 18 * scale);
+
+    // Date Pill Badge (#1e293b pill with border #334155)
+    const dateText = `DATE: ${dateStr}`;
+    ctx.font = `800 ${13 * scale}px ${fontStack}`;
+    const dateWidth = ctx.measureText(dateText).width + (24 * scale);
+    const dateHeight = 26 * scale;
+    const dateX = (canvasWidth - dateWidth) / 2;
+    const dateY = 62 * scale;
+
+    ctx.fillStyle = '#1e293b';
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1.5 * scale;
+    drawRoundedRect(ctx, dateX, dateY, dateWidth, dateHeight, 13 * scale);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#f1f5f9';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(dateText, canvasWidth / 2, dateY + (dateHeight / 2));
+    ctx.restore();
+
+    // 4. Column Headers (PARTICULARS   SELL (₹)   PAYMENT (₹))
+    let currentY = headerHeight + (25 * scale);
+    const labelX = paddingX + (8 * scale);
+    const sellColX = 370 * scale; // Right-aligned SELL column
+    const payColX = 510 * scale;  // Right-aligned PAYMENT column
+
+    ctx.font = `900 ${16 * scale}px ${fontStack}`;
+    ctx.fillStyle = '#334155';
+    ctx.textBaseline = 'middle';
+
+    ctx.textAlign = 'left';
+    ctx.fillText('PARTICULARS', labelX, currentY);
+
+    ctx.textAlign = 'right';
+    ctx.fillText('SELL (₹)', sellColX, currentY);
+    ctx.fillText('PAYMENT (₹)', payColX, currentY);
+
+    currentY += 20 * scale;
+
+    // Header divider line
+    ctx.beginPath();
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2 * scale;
+    ctx.moveTo(paddingX, currentY);
+    ctx.lineTo(canvasWidth - paddingX, currentY);
+    ctx.stroke();
+
+    currentY += 20 * scale;
+
+    // 5. Render Data Rows
+    parsedRows.forEach(row => {
+        if (row.type === 'divider') {
+            ctx.beginPath();
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 2 * scale;
+            ctx.setLineDash([5 * scale, 5 * scale]);
+            ctx.moveTo(paddingX, currentY - (11 * scale));
+            ctx.lineTo(canvasWidth - paddingX, currentY - (11 * scale));
+            ctx.stroke();
+            ctx.setLineDash([]);
+            currentY += 22 * scale;
+            return;
+        }
+
+        const isHighlight = row.isHighlight;
+        const isMagil = row.isMagil;
+
+        // Row background highlight tint
+        if (isHighlight) {
+            ctx.fillStyle = '#f0f9ff';
+            drawRoundedRect(ctx, paddingX, currentY - (16 * scale), canvasWidth - (2 * paddingX), 34 * scale, 8 * scale);
+            ctx.fill();
+        } else if (isMagil) {
+            ctx.fillStyle = '#fff1f2';
+            drawRoundedRect(ctx, paddingX, currentY - (16 * scale), canvasWidth - (2 * paddingX), 34 * scale, 8 * scale);
+            ctx.fill();
+        }
+
+        ctx.font = `900 ${19 * scale}px ${fontStack}`;
+
+        // Label
+        if (isMagil) {
+            // Red dot for Magil Yene
+            ctx.fillStyle = '#e11d48';
+            ctx.beginPath();
+            ctx.arc(labelX + (8 * scale), currentY, 7 * scale, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.textAlign = 'left';
+            ctx.fillText(row.label.replace(':-', '').trim() + ' :-', labelX + (22 * scale), currentY);
+
+            ctx.textAlign = 'right';
+            ctx.fillText(row.sellVal, sellColX, currentY);
+        } else {
+            ctx.fillStyle = isHighlight ? '#0284c7' : '#0f172a';
+            ctx.textAlign = 'left';
+            ctx.fillText(row.label, labelX, currentY);
+
+            ctx.fillStyle = isHighlight ? '#0284c7' : '#0f172a';
+            ctx.textAlign = 'right';
+            if (row.sellVal) ctx.fillText(row.sellVal, sellColX, currentY);
+            if (row.payVal) ctx.fillText(row.payVal, payColX, currentY);
+        }
+
+        currentY += rowHeight;
+    });
+
+    // 6. Bottom Navy Banner (TOTAL BALANCE DUE)
+    currentY += 15 * scale;
+    const bannerBoxX = paddingX;
+    const bannerBoxY = currentY;
+    const bannerBoxWidth = canvasWidth - (2 * paddingX);
+    const bannerBoxHeight = 90 * scale;
+
+    ctx.fillStyle = '#0f172a';
+    drawRoundedRect(ctx, bannerBoxX, bannerBoxY, bannerBoxWidth, bannerBoxHeight, 14 * scale);
+    ctx.fill();
+
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 2.5 * scale;
+    drawRoundedRect(ctx, bannerBoxX, bannerBoxY, bannerBoxWidth, bannerBoxHeight, 14 * scale);
+    ctx.stroke();
+
+    // Banner Text
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = `800 ${14 * scale}px ${fontStack}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('TOTAL BALANCE DUE', canvasWidth / 2, bannerBoxY + (16 * scale));
+
+    const finalValText = totalBalanceStr || '₹0.00';
+    const isDene = finalValText.toLowerCase().includes('dene');
+    ctx.fillStyle = isDene ? '#f87171' : '#38bdf8';
+    ctx.font = `900 ${30 * scale}px ${fontStack}`;
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(finalValText, canvasWidth / 2, bannerBoxY + bannerBoxHeight - (12 * scale));
 }
 
 function drawRoundedRect(ctx, x, y, width, height, radius) {
@@ -904,10 +1132,14 @@ async function shareReceiptPhotoToWhatsApp(targetMode) {
     if (!canvas) return;
 
     // No text parameter so ONLY photo is shared/pasted
-    let targetUrl = `https://web.whatsapp.com/send?phone=${currentCleanMobile}`;
+    let targetUrl = currentCleanMobile
+        ? `https://web.whatsapp.com/send?phone=${currentCleanMobile}`
+        : `https://web.whatsapp.com`;
 
     if (targetMode === 'api' || /Android|iPhone|iPad/i.test(navigator.userAgent)) {
-        targetUrl = `https://api.whatsapp.com/send?phone=${currentCleanMobile}`;
+        targetUrl = currentCleanMobile
+            ? `https://api.whatsapp.com/send?phone=${currentCleanMobile}`
+            : `https://api.whatsapp.com/send`;
     }
 
     canvas.toBlob(async (blob) => {

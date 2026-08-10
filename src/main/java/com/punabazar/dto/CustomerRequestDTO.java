@@ -21,6 +21,8 @@ public class CustomerRequestDTO {
     private String marketCodes;  // e.g. "PO,PC,SO,SC"
     private String receiptStyle; // STANDARD, SHARE_PERCENT, FARAK_SHARE, SIMPLE
     private BigDecimal shareRate; // e.g. 40.00%
+    private Boolean pagarEnabled;
+    private Boolean commissionEnabled;
 
     public CustomerRequestDTO() {}
 
@@ -77,4 +79,11 @@ public class CustomerRequestDTO {
 
     public BigDecimal getShareRate() { return shareRate; }
     public void setShareRate(BigDecimal shareRate) { this.shareRate = shareRate; }
+
+    public Boolean getPagarEnabled() { return pagarEnabled; }
+    public void setPagarEnabled(Boolean pagarEnabled) { this.pagarEnabled = pagarEnabled; }
+
+    public Boolean getCommissionEnabled() { return commissionEnabled; }
+    public Boolean isCommissionEnabled() { return commissionEnabled; }
+    public void setCommissionEnabled(Boolean commissionEnabled) { this.commissionEnabled = commissionEnabled; }
 }

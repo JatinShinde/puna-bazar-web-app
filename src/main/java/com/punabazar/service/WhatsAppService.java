@@ -163,7 +163,7 @@ public class WhatsAppService {
             receiptStyle = "TYPE_5";
         }
 
-        BigDecimal shareRate = customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("40.00");
+        BigDecimal shareRate = customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00");
 
         String dateStr = "";
         if (latestTx != null && latestTx.getTransactionDate() != null) {
@@ -201,51 +201,39 @@ public class WhatsAppService {
             sb.append("*TOTAL:-           ").append(fmtNum(totalAfterCommVal)).append("*\n");
             sb.append("*PAYMENT:-     ").append(fmtNum(totalPaymentVal)).append("*\n");
             sb.append("---------------------------------\n");
-            sb.append("                          *").append(fmtNum(afterPayVal)).append("*\n");
 
-            BigDecimal afterFarak = afterPayVal;
-            if (farakParam != null || customer.getFarak() != null || farakVal.compareTo(BigDecimal.ZERO) != 0) {
-                sb.append("*MISS*\n");
-                sb.append("*PAYMENT:-        ").append(fmtNum(farakVal)).append("*\n");
+            BigDecimal runningNet1 = afterPayVal;
+            if (pagarVal != null && pagarVal.compareTo(BigDecimal.ZERO) > 0) {
+                sb.append("*PAGAR:-        ").append(fmtNum(pagarVal)).append("*\n");
                 sb.append("---------------------------------\n");
-                afterFarak = afterPayVal.subtract(farakVal);
+                runningNet1 = runningNet1.subtract(pagarVal);
+            }
+
+            sb.append("*REMAINING:-       ").append(fmtNum(runningNet1)).append("*\n");
+
+            BigDecimal afterFarak = runningNet1;
+            if (farakVal != null && farakVal.compareTo(BigDecimal.ZERO) != 0) {
+                sb.append("---------------------------------\n");
+                sb.append("*MISS PAYMENT:-    ").append(fmtNum(farakVal)).append("*\n");
+                sb.append("---------------------------------\n");
+                afterFarak = runningNet1.subtract(farakVal);
                 sb.append("*TOTAL:-            ").append(fmtNum(afterFarak)).append("*\n");
             }
 
-            BigDecimal shareAmount = afterFarak.multiply(shareRate).divide(new BigDecimal("100"));
-            BigDecimal todayNet = afterFarak.subtract(shareAmount);
+            boolean isShareEnabled = (shareRate != null && shareRate.compareTo(new BigDecimal("100")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
+            BigDecimal shareAmount = BigDecimal.ZERO;
+            BigDecimal todayNet = afterFarak;
 
-            sb.append("            *(").append(shareRate.stripTrailingZeros().toPlainString()).append("%):-  ").append(fmtNum(shareAmount)).append("*\n");
-            sb.append("---------------------------------\n");
+            if (isShareEnabled) {
+                shareAmount = afterFarak.multiply(shareRate).divide(new BigDecimal("100"));
+                todayNet = afterFarak.subtract(shareAmount);
+                sb.append("---------------------------------\n");
+                sb.append("*(").append(shareRate.stripTrailingZeros().toPlainString()).append("%):-  ").append(fmtNum(shareAmount)).append("*\n");
+                sb.append("---------------------------------\n");
+            }
 
             netBalanceVal = todayNet.add(netOpening);
-
-            if (yeneVal.compareTo(BigDecimal.ZERO) > 0 || deneVal.compareTo(BigDecimal.ZERO) > 0) {
-                if (todayNet.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(todayNet)).append(" yeṇe*\n");
-                } else {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(todayNet.abs())).append(" dene*\n");
-                }
-
-                if (yeneVal.compareTo(BigDecimal.ZERO) > 0) {
-                    sb.append("🔴 *MAGIL YENE:* *").append(fmtNum(yeneVal)).append("*\n");
-                } else if (deneVal.compareTo(BigDecimal.ZERO) > 0) {
-                    sb.append("🔴 *MAGIL DENE:* *").append(fmtNum(deneVal)).append("*\n");
-                }
-
-                sb.append("---------------------------------\n");
-                if (netBalanceVal.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL BALANCE DUE:* *").append(fmtNum(netBalanceVal)).append(" yeṇe*");
-                } else {
-                    sb.append("*TOTAL BALANCE DUE:* *").append(fmtNum(netBalanceVal.abs())).append(" dene*");
-                }
-            } else {
-                if (netBalanceVal.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(netBalanceVal)).append(" yeṇe*");
-                } else {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(netBalanceVal.abs())).append(" dene*");
-                }
-            }
+            appendBalanceSection(sb, todayNet, yeneVal, deneVal, netBalanceVal);
         } else if ("TYPE_2".equals(receiptStyle) || "SIMPLE".equals(receiptStyle)) {
             String dateFormatted = dateStr;
             if (latestTx != null && latestTx.getTransactionDate() != null) {
@@ -269,34 +257,13 @@ public class WhatsAppService {
             sb.append("---------------------------------\n");
 
             BigDecimal todayNet = totalSellVal.subtract(totalPaymentVal);
-            netBalanceVal = todayNet.add(netOpening);
-
-            if (yeneVal.compareTo(BigDecimal.ZERO) > 0 || deneVal.compareTo(BigDecimal.ZERO) > 0) {
-                if (todayNet.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(todayNet)).append(" yeṇe*\n");
-                } else {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(todayNet.abs())).append(" dene*\n");
-                }
-
-                if (yeneVal.compareTo(BigDecimal.ZERO) > 0) {
-                    sb.append("🔴 *MAGIL YENE:* *").append(fmtNum(yeneVal)).append("*\n");
-                } else if (deneVal.compareTo(BigDecimal.ZERO) > 0) {
-                    sb.append("🔴 *MAGIL DENE:* *").append(fmtNum(deneVal)).append("*\n");
-                }
-
+            if (pagarVal != null && pagarVal.compareTo(BigDecimal.ZERO) > 0) {
+                sb.append("*PAGAR:-        ").append(fmtNum(pagarVal)).append("*\n");
                 sb.append("---------------------------------\n");
-                if (netBalanceVal.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL BALANCE DUE:* *").append(fmtNum(netBalanceVal)).append(" yeṇe*");
-                } else {
-                    sb.append("*TOTAL BALANCE DUE:* *").append(fmtNum(netBalanceVal.abs())).append(" dene*");
-                }
-            } else {
-                if (netBalanceVal.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(netBalanceVal)).append(" yeṇe*");
-                } else {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(netBalanceVal.abs())).append(" dene*");
-                }
+                todayNet = todayNet.subtract(pagarVal);
             }
+            netBalanceVal = todayNet.add(netOpening);
+            appendBalanceSection(sb, todayNet, yeneVal, deneVal, netBalanceVal);
         } else if ("TYPE_5".equals(receiptStyle) || "SHARE_PERCENT".equals(receiptStyle)) {
             String dateFormatted = dateStr;
             if (latestTx != null && latestTx.getTransactionDate() != null) {
@@ -321,42 +288,29 @@ public class WhatsAppService {
             sb.append("*TOTAL:-           ").append(fmtNum(totalAfterCommVal)).append("*\n");
             sb.append("*PAYMENT:-     ").append(fmtNum(totalPaymentVal)).append("*\n");
             sb.append("---------------------------------\n");
-            sb.append("                          *").append(fmtNum(afterPayVal)).append("*\n");
 
-            BigDecimal shareAmount = afterPayVal.multiply(shareRate).divide(new BigDecimal("100"));
-            BigDecimal todayNet = afterPayVal.subtract(shareAmount);
+            BigDecimal runningNet5 = afterPayVal;
+            if (pagarVal != null && pagarVal.compareTo(BigDecimal.ZERO) > 0) {
+                sb.append("*PAGAR:-        ").append(fmtNum(pagarVal)).append("*\n");
+                sb.append("---------------------------------\n");
+                runningNet5 = runningNet5.subtract(pagarVal);
+            } else {
+                sb.append("                          *").append(fmtNum(afterPayVal)).append("*\n");
+            }
 
-            sb.append("            *(").append(shareRate.stripTrailingZeros().toPlainString()).append("%):-  ").append(fmtNum(shareAmount)).append("*\n");
-            sb.append("---------------------------------\n");
+            boolean isShareEnabled = (shareRate != null && shareRate.compareTo(new BigDecimal("100")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
+            BigDecimal shareAmount = BigDecimal.ZERO;
+            BigDecimal todayNet = runningNet5;
+
+            if (isShareEnabled) {
+                shareAmount = runningNet5.multiply(shareRate).divide(new BigDecimal("100"));
+                todayNet = runningNet5.subtract(shareAmount);
+                sb.append("            *(").append(shareRate.stripTrailingZeros().toPlainString()).append("%):-  ").append(fmtNum(shareAmount)).append("*\n");
+                sb.append("---------------------------------\n");
+            }
 
             netBalanceVal = todayNet.add(netOpening);
-
-            if (yeneVal.compareTo(BigDecimal.ZERO) > 0 || deneVal.compareTo(BigDecimal.ZERO) > 0) {
-                if (todayNet.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(todayNet)).append(" yeṇe*\n");
-                } else {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(todayNet.abs())).append(" dene*\n");
-                }
-
-                if (yeneVal.compareTo(BigDecimal.ZERO) > 0) {
-                    sb.append("🔴 *MAGIL YENE:* *").append(fmtNum(yeneVal)).append("*\n");
-                } else if (deneVal.compareTo(BigDecimal.ZERO) > 0) {
-                    sb.append("🔴 *MAGIL DENE:* *").append(fmtNum(deneVal)).append("*\n");
-                }
-
-                sb.append("---------------------------------\n");
-                if (netBalanceVal.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL BALANCE DUE:* *").append(fmtNum(netBalanceVal)).append(" yeṇe*");
-                } else {
-                    sb.append("*TOTAL BALANCE DUE:* *").append(fmtNum(netBalanceVal.abs())).append(" dene*");
-                }
-            } else {
-                if (netBalanceVal.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(netBalanceVal)).append(" yeṇe*");
-                } else {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(netBalanceVal.abs())).append(" dene*");
-                }
-            }
+            appendBalanceSection(sb, todayNet, yeneVal, deneVal, netBalanceVal);
         } else if ("TYPE_4".equals(receiptStyle)) {
             String dateFormatted = dateStr;
             if (latestTx != null && latestTx.getTransactionDate() != null) {
@@ -379,40 +333,17 @@ public class WhatsAppService {
             sb.append("*PAYMENT:-     ").append(fmtNum(totalPaymentVal)).append("*\n");
             sb.append("---------------------------------\n");
             BigDecimal afterPayDirect = totalSellVal.subtract(totalPaymentVal);
-            sb.append("                          *").append(fmtNum(afterPayDirect)).append("*\n");
-
-            sb.append("*PAGAR:-        ").append(fmtNum(pagarVal)).append("*\n");
-            sb.append("---------------------------------\n");
-
-            BigDecimal todayNet = afterPayDirect.subtract(pagarVal);
-            netBalanceVal = todayNet.add(netOpening);
-
-            if (yeneVal.compareTo(BigDecimal.ZERO) > 0 || deneVal.compareTo(BigDecimal.ZERO) > 0) {
-                if (todayNet.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(todayNet)).append(" yeṇe*\n");
-                } else {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(todayNet.abs())).append(" dene*\n");
-                }
-
-                if (yeneVal.compareTo(BigDecimal.ZERO) > 0) {
-                    sb.append("🔴 *MAGIL YENE:* *").append(fmtNum(yeneVal)).append("*\n");
-                } else if (deneVal.compareTo(BigDecimal.ZERO) > 0) {
-                    sb.append("🔴 *MAGIL DENE:* *").append(fmtNum(deneVal)).append("*\n");
-                }
-
+            
+            BigDecimal todayNet = afterPayDirect;
+            if (pagarVal != null && pagarVal.compareTo(BigDecimal.ZERO) > 0) {
+                sb.append("                          *").append(fmtNum(afterPayDirect)).append("*\n");
+                sb.append("*PAGAR:-        ").append(fmtNum(pagarVal)).append("*\n");
                 sb.append("---------------------------------\n");
-                if (netBalanceVal.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL BALANCE DUE:* *").append(fmtNum(netBalanceVal)).append(" yeṇe*");
-                } else {
-                    sb.append("*TOTAL BALANCE DUE:* *").append(fmtNum(netBalanceVal.abs())).append(" dene*");
-                }
-            } else {
-                if (netBalanceVal.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(netBalanceVal)).append(" yeṇe*");
-                } else {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(netBalanceVal.abs())).append(" dene*");
-                }
+                todayNet = afterPayDirect.subtract(pagarVal);
             }
+
+            netBalanceVal = todayNet.add(netOpening);
+            appendBalanceSection(sb, todayNet, yeneVal, deneVal, netBalanceVal);
         } else {
             // TYPE_3 or STANDARD (PO, PC, Com, Pay, Pagar, Magil Baki)
             String dateFormatted = dateStr;
@@ -438,40 +369,17 @@ public class WhatsAppService {
             sb.append("*TOTAL:-           ").append(fmtNum(totalAfterCommVal)).append("*\n");
             sb.append("*PAYMENT:-     ").append(fmtNum(totalPaymentVal)).append("*\n");
             sb.append("---------------------------------\n");
-            sb.append("                          *").append(fmtNum(afterPayVal)).append("*\n");
 
-            sb.append("*PAGAR:-        ").append(fmtNum(pagarVal)).append("*\n");
-            sb.append("---------------------------------\n");
-
-            BigDecimal todayNet = afterPayVal.subtract(pagarVal);
-            netBalanceVal = todayNet.add(netOpening);
-
-            if (yeneVal.compareTo(BigDecimal.ZERO) > 0 || deneVal.compareTo(BigDecimal.ZERO) > 0) {
-                if (todayNet.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(todayNet)).append(" yeṇe*\n");
-                } else {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(todayNet.abs())).append(" dene*\n");
-                }
-
-                if (yeneVal.compareTo(BigDecimal.ZERO) > 0) {
-                    sb.append("🔴 *MAGIL YENE:* *").append(fmtNum(yeneVal)).append("*\n");
-                } else if (deneVal.compareTo(BigDecimal.ZERO) > 0) {
-                    sb.append("🔴 *MAGIL DENE:* *").append(fmtNum(deneVal)).append("*\n");
-                }
-
+            BigDecimal todayNet = afterPayVal;
+            if (pagarVal != null && pagarVal.compareTo(BigDecimal.ZERO) > 0) {
+                sb.append("                          *").append(fmtNum(afterPayVal)).append("*\n");
+                sb.append("*PAGAR:-        ").append(fmtNum(pagarVal)).append("*\n");
                 sb.append("---------------------------------\n");
-                if (netBalanceVal.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL BALANCE DUE:* *").append(fmtNum(netBalanceVal)).append(" yeṇe*");
-                } else {
-                    sb.append("*TOTAL BALANCE DUE:* *").append(fmtNum(netBalanceVal.abs())).append(" dene*");
-                }
-            } else {
-                if (netBalanceVal.compareTo(BigDecimal.ZERO) >= 0) {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(netBalanceVal)).append(" yeṇe*");
-                } else {
-                    sb.append("*TOTAL :-*        *").append(fmtNum(netBalanceVal.abs())).append(" dene*");
-                }
+                todayNet = afterPayVal.subtract(pagarVal);
             }
+
+            netBalanceVal = todayNet.add(netOpening);
+            appendBalanceSection(sb, todayNet, yeneVal, deneVal, netBalanceVal);
         }
 
         String message = sb.toString();
@@ -512,6 +420,31 @@ public class WhatsAppService {
             return String.format("*PC:-                  %6s     %6s*", sellStr, payStr);
         } else {
             return String.format("*TOTAL:-           %6s     %6s*", sellStr, payStr);
+        }
+    }
+
+    private void appendBalanceSection(StringBuilder sb, BigDecimal todayNet, BigDecimal yeneVal, BigDecimal deneVal, BigDecimal netBalanceVal) {
+        if (yeneVal.compareTo(BigDecimal.ZERO) > 0 || deneVal.compareTo(BigDecimal.ZERO) > 0) {
+            sb.append("---------------------------------\n");
+            if (todayNet.compareTo(BigDecimal.ZERO) >= 0) {
+                sb.append("*TOTAL :-*        *").append(fmtNum(todayNet)).append(" yeṇe*\n");
+            } else {
+                sb.append("*TOTAL :-*        *").append(fmtNum(todayNet.abs())).append(" dene*\n");
+            }
+
+            sb.append("---------------------------------\n");
+            if (yeneVal.compareTo(BigDecimal.ZERO) > 0) {
+                sb.append("🔴 *MAGIL YENE:* *").append(fmtNum(yeneVal)).append("*\n");
+            } else if (deneVal.compareTo(BigDecimal.ZERO) > 0) {
+                sb.append("🔴 *MAGIL DENE:* *").append(fmtNum(deneVal)).append("*\n");
+            }
+        }
+
+        sb.append("---------------------------------\n");
+        if (netBalanceVal.compareTo(BigDecimal.ZERO) >= 0) {
+            sb.append("*TOTAL BALANCE DUE:* *").append(fmtNum(netBalanceVal)).append(" yeṇe*");
+        } else {
+            sb.append("*TOTAL BALANCE DUE:* *").append(fmtNum(netBalanceVal.abs())).append(" dene*");
         }
     }
 

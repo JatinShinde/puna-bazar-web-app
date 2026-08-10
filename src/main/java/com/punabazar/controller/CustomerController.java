@@ -44,6 +44,11 @@ public class CustomerController {
         return customerService.createCustomerWithTrade(request);
     }
 
+    @PutMapping("/{id}")
+    public Customer update(@PathVariable Long id, @RequestBody CustomerRequestDTO request) {
+        return customerService.updateCustomer(id, request);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         customerService.deleteCustomer(id);

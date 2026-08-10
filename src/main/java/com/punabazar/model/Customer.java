@@ -15,10 +15,10 @@ public class Customer {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, length = 15)
+    @Column(nullable = true, length = 15)
     private String mobileNumber;
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = true, length = 50)
     private String city;
 
     private String marketZone;
@@ -29,8 +29,12 @@ public class Customer {
     @Column(precision = 5, scale = 2)
     private BigDecimal commissionRate = new BigDecimal("10.00");
 
+    private Boolean commissionEnabled = false;
+
     @Column(precision = 12, scale = 2)
     private BigDecimal pagar = BigDecimal.ZERO;
+
+    private Boolean pagarEnabled = false;
 
     @Column(precision = 12, scale = 2)
     private BigDecimal magilBaki = BigDecimal.ZERO;
@@ -89,8 +93,15 @@ public class Customer {
     public BigDecimal getCommissionRate() { return commissionRate; }
     public void setCommissionRate(BigDecimal commissionRate) { this.commissionRate = commissionRate; }
 
+    public Boolean getCommissionEnabled() { return commissionEnabled != null ? commissionEnabled : false; }
+    public Boolean isCommissionEnabled() { return getCommissionEnabled(); }
+    public void setCommissionEnabled(Boolean commissionEnabled) { this.commissionEnabled = commissionEnabled; }
+
     public BigDecimal getPagar() { return pagar; }
     public void setPagar(BigDecimal pagar) { this.pagar = pagar; }
+
+    public Boolean getPagarEnabled() { return pagarEnabled != null ? pagarEnabled : false; }
+    public void setPagarEnabled(Boolean pagarEnabled) { this.pagarEnabled = pagarEnabled; }
 
     public BigDecimal getMagilBaki() { return magilBaki; }
     public void setMagilBaki(BigDecimal magilBaki) { this.magilBaki = magilBaki; }

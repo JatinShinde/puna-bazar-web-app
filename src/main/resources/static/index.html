@@ -77,23 +77,11 @@
                 </div>
 
                 <form id="tradeForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="selectCustomer">Select Customer / Trader *</label>
-                            <select id="selectCustomer" class="form-control" required>
-                                <option value="">-- Choose Customer --</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="tradeReceiptStyle">Market / Receipt Type *</label>
-                            <select id="tradeReceiptStyle" class="form-control">
-                                <option value="TYPE_1">Type 1: Comi + Farak + 40% Share + Magil Baki (e.g. Shrigonda)</option>
-                                <option value="TYPE_2">Type 2: Simple Direct (PO/PC/Payment Only - e.g. Jamkhedkar)</option>
-                                <option value="TYPE_3">Type 3: Comi + Pagar + Magil Baki (e.g. Sai / Kisan)</option>
-                                <option value="TYPE_4">Type 4: Pagar Only (No Commission)</option>
-                                <option value="TYPE_5">Type 5: Comi + 40% Share + Magil Baki (e.g. Ganeshra)</option>
-                            </select>
-                        </div>
+                    <div class="form-group" style="margin-bottom: 1.25rem;">
+                        <label for="selectCustomer">Select Customer / Trader *</label>
+                        <select id="selectCustomer" class="form-control" required>
+                            <option value="">-- Choose Customer --</option>
+                        </select>
                     </div>
 
                     <div class="form-row">
@@ -101,13 +89,13 @@
                             <label for="txDate">Transaction Date</label>
                             <input type="date" id="txDate" class="form-control" required>
                         </div>
-                        <div class="form-group" id="commGroup">
-                            <label for="commPercent">Commission Rate (%)</label>
-                            <input type="number" id="commPercent" class="form-control" value="10.00" step="0.5">
+                        <div class="form-group" id="commGroup" style="display: none;">
+                            <label for="commPercent">Commission Rate (%) <span style="font-size:0.75rem; color:#60a5fa;">(🔒 Fixed)</span></label>
+                            <input type="number" id="commPercent" class="form-control" value="10.00" step="0.5" readonly style="background: rgba(255, 255, 255, 0.05); cursor: not-allowed;">
                         </div>
-                        <div class="form-group" id="shareGroup">
-                            <label for="shareRatePercent">Share Rate (%)</label>
-                            <input type="number" id="shareRatePercent" class="form-control" value="40.00" step="1">
+                        <div class="form-group" id="shareGroup" style="display: none;">
+                            <label for="shareRatePercent">Share Rate (%) <span style="font-size:0.75rem; color:#c084fc;">(🔒 Fixed)</span></label>
+                            <input type="number" id="shareRatePercent" class="form-control" value="40.00" step="1" readonly style="background: rgba(255, 255, 255, 0.05); cursor: not-allowed;">
                         </div>
                     </div>
 
@@ -153,8 +141,8 @@
                             <input type="number" id="farakAmount" class="form-control" placeholder="e.g. 0" value="0" step="0.01">
                         </div>
                         <div class="form-group" id="pagarGroup">
-                            <label for="pagarAmount">Pagar Amount ₹</label>
-                            <input type="number" id="pagarAmount" class="form-control" placeholder="e.g. 0" value="0" step="0.01">
+                            <label for="pagarAmount">Pagar Amount ₹ <span style="font-size:0.75rem; color:#fca5a5;">(🔒 Fixed)</span></label>
+                            <input type="number" id="pagarAmount" class="form-control" placeholder="e.g. 0" value="0" step="0.01" readonly style="background: rgba(255, 255, 255, 0.05); cursor: not-allowed;">
                         </div>
                     </div>
 
@@ -181,7 +169,7 @@
                             <div><span id="previewTotalPayment">₹0.00</span></div>
                         </div>
 
-                        <div class="summary-item" id="previewComiRow">
+                        <div class="summary-item" id="previewComiRow" style="border-top: 1px dashed rgba(255, 255, 255, 0.15); padding-top: 0.4rem; margin-top: 0.2rem;">
                             <span>COMI * <span id="previewCommRate">10</span>%:</span>
                             <strong id="previewCommCut" style="color: var(--accent);">-₹0.00</strong>
                         </div>
@@ -189,23 +177,23 @@
                             <span>Total (After Commission):</span>
                             <strong id="previewTotalAfterComm">₹0.00</strong>
                         </div>
-                        <div class="summary-item" id="previewPaymentRow">
-                            <span>Payment Received:</span>
+                        <div class="summary-item" id="previewPaymentRow" style="border-top: 1px dashed rgba(255, 255, 255, 0.15); padding-top: 0.4rem; margin-top: 0.2rem;">
+                            <span>Payment:</span>
                             <strong id="previewPayment" style="color: #60a5fa;">-₹0.00</strong>
                         </div>
-                        <div class="summary-item" id="previewFarakRow">
+                        <div class="summary-item" id="previewFarakRow" style="border-top: 1px dashed rgba(255, 255, 255, 0.15); padding-top: 0.4rem; margin-top: 0.2rem;">
                             <span>Miss Payment:</span>
                             <strong id="previewFarak" style="color: #a7f3d0;">₹0.00</strong>
                         </div>
-                        <div class="summary-item" id="previewShareRow">
+                        <div class="summary-item" id="previewShareRow" style="border-top: 1px dashed rgba(255, 255, 255, 0.15); padding-top: 0.4rem; margin-top: 0.2rem;">
                             <span>Share (<span id="previewShareRate">40</span>%):</span>
                             <strong id="previewShareAmount" style="color: #c084fc;">₹0.00</strong>
                         </div>
-                        <div class="summary-item" id="previewPagarRow">
+                        <div class="summary-item" id="previewPagarRow" style="border-top: 1px dashed rgba(255, 255, 255, 0.15); padding-top: 0.4rem; margin-top: 0.2rem;">
                             <span>Pagar Deduction:</span>
                             <strong id="previewPagarAmount" style="color: #fca5a5;">-₹0.00</strong>
                         </div>
-                        <div class="summary-item">
+                        <div class="summary-item" style="border-top: 1px dashed rgba(255, 255, 255, 0.15); padding-top: 0.4rem; margin-top: 0.2rem;">
                             <span>Magil Yene (Ma yeṇe):</span>
                             <strong id="previewYene" style="color: #34d399;">₹0.00</strong>
                         </div>
@@ -213,13 +201,20 @@
                             <span>Magil Dene (Ma dene):</span>
                             <strong id="previewDene" style="color: #f87171;">-₹0.00</strong>
                         </div>
-                        <div class="summary-item total">
+                        <div class="summary-item total" style="border-top: 2px dashed rgba(255, 255, 255, 0.25); padding-top: 0.5rem; margin-top: 0.4rem;">
                             <span>Total (Net Balance):</span>
                             <strong id="previewNetBalance" style="color: #fbbf24;">₹0.00</strong>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-primary">💾 Process Trade & Update Ledger</button>
+                    <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+                        <button type="button" id="btnSaveTrade" class="btn-primary" style="flex: 1; background: #059669; border-color: #10b981; font-weight: 700; font-size: 0.95rem; padding: 0.75rem;" onclick="processTradeAction('save')">
+                            💾 Save
+                        </button>
+                        <button type="button" id="btnShareTrade" class="btn-primary" style="flex: 1; background: #25d366; border-color: #34d399; font-weight: 700; font-size: 0.95rem; padding: 0.75rem;" onclick="processTradeAction('share')">
+                            📲 Share
+                        </button>
+                    </div>
                 </form>
             </section>
 
@@ -318,45 +313,50 @@
     <div id="customerModal" class="modal-overlay">
         <div class="modal-card" style="max-width: 540px;">
             <div class="modal-header">
-                <h3 class="modal-title">➕ Add New Market Customer</h3>
+                <h3 class="modal-title" id="custModalTitle">➕ Add New Market Customer</h3>
                 <button class="close-btn" onclick="closeModal('customerModal')">&times;</button>
             </div>
 
             <form id="newCustomerForm">
+                <input type="hidden" id="editingCustId" value="">
                 <div class="form-group">
                     <label for="custName">Customer Name *</label>
                     <input type="text" id="custName" class="form-control" placeholder="e.g. Ramesh Patil" required>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="custMobile">Mobile Number *</label>
-                        <input type="text" id="custMobile" class="form-control" placeholder="e.g. 9822012345" required>
+                <div class="form-group" style="margin-top: 0.75rem; background: rgba(255, 255, 255, 0.05); padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; color: #ffffff; font-weight: 600; margin: 0 0 0.5rem 0;">
+                        <input type="checkbox" id="custEnableComm" onchange="document.getElementById('custCommContainer').style.display = this.checked ? 'block' : 'none';" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                        <span>Apply Commission Deduction for this Market</span>
+                    </label>
+                    <div id="custCommContainer" style="display: none; margin-top: 0.3rem; margin-bottom: 0.6rem; padding-left: 1.8rem;">
+                        <label for="custCommission" style="font-size: 0.8rem; color: #60a5fa; display: block; margin-bottom: 0.2rem;">Commission Rate % (Default 10%):</label>
+                        <input type="number" id="custCommission" class="form-control" value="10.00" step="0.5" style="max-width: 140px; padding: 0.3rem 0.6rem; font-size: 0.85rem;">
                     </div>
-                    <div class="form-group">
-                        <label for="custCity">City / Market *</label>
-                        <input type="text" id="custCity" class="form-control" placeholder="e.g. Solapur, Pune, Mumbai" required>
+
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; color: #ffffff; font-weight: 600; margin: 0 0 0.5rem 0;">
+                        <input type="checkbox" id="custEnablePagar" onchange="document.getElementById('custPagarContainer').style.display = this.checked ? 'block' : 'none';" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                        <span>Enable Pagar Deduction for this Market</span>
+                    </label>
+                    <div id="custPagarContainer" style="display: none; margin-top: 0.3rem; margin-bottom: 0.6rem; padding-left: 1.8rem;">
+                        <label for="custPagar" style="font-size: 0.8rem; color: #fca5a5; display: block; margin-bottom: 0.2rem;">Pagar Amount ₹:</label>
+                        <input type="number" id="custPagar" class="form-control" placeholder="e.g. 0.00" value="0.00" step="0.01" style="max-width: 140px; padding: 0.3rem 0.6rem; font-size: 0.85rem;">
                     </div>
+
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; color: #ffffff; font-weight: 600; margin: 0;">
+                        <input type="checkbox" id="custShare4060" onchange="document.getElementById('custShareRateContainer').style.display = this.checked ? 'block' : 'none';" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                        <span>Apply 40/60 % Share Calculation</span>
+                    </label>
+                    <div id="custShareRateContainer" style="display: none; margin-top: 0.4rem; padding-left: 1.8rem;">
+                        <label for="custShareRateVal" style="font-size: 0.8rem; color: #c084fc; display: block; margin-bottom: 0.2rem;">Custom Share % (Default 40%):</label>
+                        <input type="number" id="custShareRateVal" class="form-control" value="40.00" step="1" style="max-width: 140px; padding: 0.3rem 0.6rem; font-size: 0.85rem;">
+                    </div>
+                    <small style="color: var(--text-muted); display: block; margin-top: 0.4rem; font-size: 0.8rem;">
+                        Select which calculation features apply to this market/customer account.
+                    </small>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="custCommission">Commission Rate %</label>
-                        <input type="number" id="custCommission" class="form-control" value="10.00" step="0.5" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="custReceiptStyle">Receipt & Math Style *</label>
-                        <select id="custReceiptStyle" class="form-control">
-                            <option value="TYPE_1">Type 1: Comi + Farak + 40% Share + Magil Baki (e.g. Shrigonda)</option>
-                            <option value="TYPE_2">Type 2: Simple Direct (PO/PC/Payment Only - e.g. Jamkhedkar)</option>
-                            <option value="TYPE_3">Type 3: Comi + Pagar + Magil Baki (e.g. Sai / Kisan)</option>
-                            <option value="TYPE_4">Type 4: Pagar Only (No Commission)</option>
-                            <option value="TYPE_5">Type 5: Comi + 40% Share + Magil Baki (e.g. Ganeshra)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn-primary" style="margin-top: 1rem;">💾 Save Customer Profile</button>
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;" id="btnSaveCust">💾 Save Customer Profile</button>
             </form>
         </div>
     </div>

@@ -74,11 +74,15 @@ public class CustomerService {
         String balanceType = effectiveMagilBaki.compareTo(BigDecimal.ZERO) < 0 ? "DENE" : "YENE";
         BigDecimal magilBaki = effectiveMagilBaki.abs();
 
+        String mobile = request.getMobileNumber() != null ? request.getMobileNumber() : "";
+        String city = request.getCity() != null ? request.getCity() : "";
+        String marketZone = request.getMarketZone() != null ? request.getMarketZone() : city;
+
         Customer customer = new Customer(
                 request.getName(),
-                request.getMobileNumber(),
-                request.getCity(),
-                request.getMarketZone() != null ? request.getMarketZone() : request.getCity(),
+                mobile,
+                city,
+                marketZone,
                 effectiveMagilBaki
         );
 
@@ -87,8 +91,14 @@ public class CustomerService {
         if (request.getCommissionPercentage() != null) {
             customer.setCommissionRate(request.getCommissionPercentage());
         }
+        if (request.getCommissionEnabled() != null) {
+            customer.setCommissionEnabled(request.getCommissionEnabled());
+        }
         if (request.getPagar() != null) {
             customer.setPagar(request.getPagar());
+        }
+        if (request.getPagarEnabled() != null) {
+            customer.setPagarEnabled(request.getPagarEnabled());
         }
         customer.setMagilBaki(magilBaki);
         customer.setBalanceType(balanceType);
@@ -129,6 +139,33 @@ public class CustomerService {
         }
 
         return customer;
+    }
+
+    @Transactional
+    public Customer updateCustomer(Long id, CustomerRequestDTO request) {
+        Customer customer = getCustomerById(id);
+        if (request.getName() != null && !request.getName().trim().isEmpty()) {
+            customer.setName(request.getName().trim());
+        }
+        if (request.getCommissionPercentage() != null) {
+            customer.setCommissionRate(request.getCommissionPercentage());
+        }
+        if (request.getCommissionEnabled() != null) {
+            customer.setCommissionEnabled(request.getCommissionEnabled());
+        }
+        if (request.getPagar() != null) {
+            customer.setPagar(request.getPagar());
+        }
+        if (request.getPagarEnabled() != null) {
+            customer.setPagarEnabled(request.getPagarEnabled());
+        }
+        if (request.getShareRate() != null) {
+            customer.setShareRate(request.getShareRate());
+        }
+        if (request.getReceiptStyle() != null && !request.getReceiptStyle().trim().isEmpty()) {
+            customer.setReceiptStyle(request.getReceiptStyle().trim().toUpperCase());
+        }
+        return customerRepository.save(customer);
     }
 
     @Transactional
