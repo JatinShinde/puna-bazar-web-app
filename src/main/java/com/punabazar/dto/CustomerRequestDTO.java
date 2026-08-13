@@ -23,6 +23,7 @@ public class CustomerRequestDTO {
     private BigDecimal shareRate; // e.g. 40.00%
     private Boolean pagarEnabled;
     private Boolean commissionEnabled;
+    private Boolean share30ProfitOnly;
 
     public CustomerRequestDTO() {}
 
@@ -86,4 +87,7 @@ public class CustomerRequestDTO {
     public Boolean getCommissionEnabled() { return commissionEnabled; }
     public Boolean isCommissionEnabled() { return commissionEnabled; }
     public void setCommissionEnabled(Boolean commissionEnabled) { this.commissionEnabled = commissionEnabled; }
+
+    public Boolean getShare30ProfitOnly() { return share30ProfitOnly; }
+    public void setShare30ProfitOnly(Boolean share30ProfitOnly) { this.share30ProfitOnly = share30ProfitOnly; }
 }

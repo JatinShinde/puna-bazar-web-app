@@ -60,6 +60,8 @@ public class Customer {
     @Column(precision = 5, scale = 2)
     private BigDecimal shareRate = new BigDecimal("100.00");
 
+    private Boolean share30ProfitOnly = false;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public Customer() {}
@@ -126,6 +128,9 @@ public class Customer {
 
     public BigDecimal getShareRate() { return shareRate; }
     public void setShareRate(BigDecimal shareRate) { this.shareRate = shareRate; }
+
+    public Boolean getShare30ProfitOnly() { return share30ProfitOnly != null ? share30ProfitOnly : false; }
+    public void setShare30ProfitOnly(Boolean share30ProfitOnly) { this.share30ProfitOnly = share30ProfitOnly; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

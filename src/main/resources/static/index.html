@@ -397,14 +397,20 @@
                         <input type="number" id="custPagar" class="form-control" placeholder="e.g. 0.00" value="0.00" step="0.01" style="max-width: 140px; padding: 0.3rem 0.6rem; font-size: 0.85rem;">
                     </div>
 
-                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; color: #ffffff; font-weight: 600; margin: 0;">
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; color: #ffffff; font-weight: 600; margin: 0 0 0.5rem 0;">
                         <input type="checkbox" id="custShare4060" onchange="document.getElementById('custShareRateContainer').style.display = this.checked ? 'block' : 'none';" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
-                        <span>Apply 40/60 % Share Calculation</span>
+                        <span>Apply Share Rate Calculation (e.g. 40/60)</span>
                     </label>
-                    <div id="custShareRateContainer" style="display: none; margin-top: 0.4rem; padding-left: 1.8rem;">
+                    <div id="custShareRateContainer" style="display: none; margin-top: 0.4rem; padding-left: 1.8rem; margin-bottom: 0.5rem;">
                         <label for="custShareRateVal" style="font-size: 0.8rem; color: #c084fc; display: block; margin-bottom: 0.2rem;">Custom Share % (Default 40%):</label>
                         <input type="number" id="custShareRateVal" class="form-control" value="40.00" step="1" style="max-width: 140px; padding: 0.3rem 0.6rem; font-size: 0.85rem;">
                     </div>
+
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; color: #a7f3d0; font-weight: 600; margin: 0;">
+                        <input type="checkbox" id="custShare30ProfitOnly" onchange="if(this.checked){ document.getElementById('custShare4060').checked = true; document.getElementById('custShareRateContainer').style.display = 'block'; document.getElementById('custShareRateVal').value = '30'; }" style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;">
+                        <span>Apply 30% Share (Profit Only - No Loss Share)</span>
+                    </label>
+
                     <small style="color: var(--text-muted); display: block; margin-top: 0.4rem; font-size: 0.8rem;">
                         Select which calculation features apply to this market/customer account.
                     </small>

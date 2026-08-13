@@ -114,6 +114,9 @@ public class CustomerService {
         if (request.getShareRate() != null) {
             customer.setShareRate(request.getShareRate());
         }
+        if (request.getShare30ProfitOnly() != null) {
+            customer.setShare30ProfitOnly(request.getShare30ProfitOnly());
+        }
 
         customer = customerRepository.save(customer);
 
@@ -161,6 +164,12 @@ public class CustomerService {
         }
         if (request.getShareRate() != null) {
             customer.setShareRate(request.getShareRate());
+        }
+        if (request.getShare30ProfitOnly() != null) {
+            customer.setShare30ProfitOnly(request.getShare30ProfitOnly());
+        }
+        if (request.getMarketCodes() != null && !request.getMarketCodes().trim().isEmpty()) {
+            customer.setMarketCodes(request.getMarketCodes().trim());
         }
         if (request.getReceiptStyle() != null && !request.getReceiptStyle().trim().isEmpty()) {
             customer.setReceiptStyle(request.getReceiptStyle().trim().toUpperCase());

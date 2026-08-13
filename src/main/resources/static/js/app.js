@@ -362,8 +362,12 @@ window.editCustomer = function(id) {
     if (document.getElementById('custPagarContainer')) document.getElementById('custPagarContainer').style.display = isPagarEnabled ? 'block' : 'none';
 
     const isShareEnabled = isShareEnabledForCustomer(customer);
+    const is30ProfitOnly = customer.share30ProfitOnly === true || customer.share30ProfitOnly === 'true' || customer.shareRate === 30;
     if (document.getElementById('custShare4060')) {
         document.getElementById('custShare4060').checked = isShareEnabled;
+    }
+    if (document.getElementById('custShare30ProfitOnly')) {
+        document.getElementById('custShare30ProfitOnly').checked = is30ProfitOnly;
     }
     if (document.getElementById('custShareRateVal')) {
         document.getElementById('custShareRateVal').value = isShareEnabled ? customer.shareRate : 40.0;
@@ -438,10 +442,16 @@ function calculateMathPreview() {
     if (rowShare) rowShare.style.display = isShareEnabled ? 'flex' : 'none';
     if (rowPagar) rowPagar.style.display = isPagarEnabled ? 'flex' : 'none';
 
+    const is30ProfitOnly = customer && (customer.share30ProfitOnly === true || customer.share30ProfitOnly === 'true' || shareRate === 30.0);
+
     if (isShareEnabled) {
         const afterFarak = afterPay - farakVal;
-        shareAmount = (afterFarak * shareRate) / 100.0;
-        netBalance = (shareAmount - actualPagarVal) + openingNet;
+        if (is30ProfitOnly) {
+            shareAmount = afterFarak > 0 ? (afterFarak * shareRate) / 100.0 : 0;
+        } else {
+            shareAmount = (afterFarak * shareRate) / 100.0;
+        }
+        netBalance = (afterFarak - shareAmount - actualPagarVal) + openingNet;
     } else {
         netBalance = (afterPay - actualPagarVal) + openingNet;
     }
@@ -580,6 +590,7 @@ async function handleNewCustomerSubmit(e) {
     const pagarVal = document.getElementById('custPagar') ? (parseFloat(document.getElementById('custPagar').value) || 0) : 0;
 
     const isShare4060Checked = document.getElementById('custShare4060') ? document.getElementById('custShare4060').checked : false;
+    const isShare30ProfitOnlyChecked = document.getElementById('custShare30ProfitOnly') ? document.getElementById('custShare30ProfitOnly').checked : false;
     const customShareRate = document.getElementById('custShareRateVal') ? (parseFloat(document.getElementById('custShareRateVal').value) || 40.0) : 40.0;
     const shareRateVal = isShare4060Checked ? customShareRate : 100.0;
 
@@ -589,6 +600,7 @@ async function handleNewCustomerSubmit(e) {
         city: '',
         receiptStyle: 'TYPE_1',
         shareRate: shareRateVal,
+        share30ProfitOnly: isShare30ProfitOnlyChecked || shareRateVal === 30.0,
         commissionPercentage: commVal,
         commissionEnabled: isCommEnabledChecked,
         pagar: pagarVal,

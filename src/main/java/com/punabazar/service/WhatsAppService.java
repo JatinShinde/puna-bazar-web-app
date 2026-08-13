@@ -230,15 +230,27 @@ public class WhatsAppService {
             }
 
             boolean isShareEnabled = (shareRate != null && shareRate.compareTo(new BigDecimal("100")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
+            boolean is30ProfitOnly = Boolean.TRUE.equals(customer.getShare30ProfitOnly()) || (shareRate != null && shareRate.compareTo(new BigDecimal("30")) == 0);
             BigDecimal shareAmount = BigDecimal.ZERO;
             BigDecimal todayNet = afterFarak;
 
             if (isShareEnabled) {
-                shareAmount = afterFarak.multiply(shareRate).divide(new BigDecimal("100"));
+                if (is30ProfitOnly) {
+                    if (afterFarak.compareTo(BigDecimal.ZERO) > 0) {
+                        shareAmount = afterFarak.multiply(shareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                    } else {
+                        shareAmount = BigDecimal.ZERO;
+                    }
+                } else {
+                    shareAmount = afterFarak.multiply(shareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                }
+
                 todayNet = afterFarak.subtract(shareAmount);
-                sb.append("---------------------------------\n");
-                sb.append("*(").append(shareRate.stripTrailingZeros().toPlainString()).append("%):-  ").append(fmtNum(shareAmount)).append("*\n");
-                sb.append("---------------------------------\n");
+                if (shareAmount.compareTo(BigDecimal.ZERO) != 0) {
+                    sb.append("---------------------------------\n");
+                    sb.append("*(").append(shareRate.stripTrailingZeros().toPlainString()).append("%):-  ").append(fmtNum(shareAmount)).append("*\n");
+                    sb.append("---------------------------------\n");
+                }
             }
 
             netBalanceVal = todayNet.add(netOpening);
@@ -308,14 +320,26 @@ public class WhatsAppService {
             }
 
             boolean isShareEnabled = (shareRate != null && shareRate.compareTo(new BigDecimal("100")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
+            boolean is30ProfitOnly = Boolean.TRUE.equals(customer.getShare30ProfitOnly()) || (shareRate != null && shareRate.compareTo(new BigDecimal("30")) == 0);
             BigDecimal shareAmount = BigDecimal.ZERO;
             BigDecimal todayNet = runningNet5;
 
             if (isShareEnabled) {
-                shareAmount = runningNet5.multiply(shareRate).divide(new BigDecimal("100"));
+                if (is30ProfitOnly) {
+                    if (runningNet5.compareTo(BigDecimal.ZERO) > 0) {
+                        shareAmount = runningNet5.multiply(shareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                    } else {
+                        shareAmount = BigDecimal.ZERO;
+                    }
+                } else {
+                    shareAmount = runningNet5.multiply(shareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                }
+
                 todayNet = runningNet5.subtract(shareAmount);
-                sb.append("            *(").append(shareRate.stripTrailingZeros().toPlainString()).append("%):-  ").append(fmtNum(shareAmount)).append("*\n");
-                sb.append("---------------------------------\n");
+                if (shareAmount.compareTo(BigDecimal.ZERO) != 0) {
+                    sb.append("            *(").append(shareRate.stripTrailingZeros().toPlainString()).append("%):-  ").append(fmtNum(shareAmount)).append("*\n");
+                    sb.append("---------------------------------\n");
+                }
             }
 
             netBalanceVal = todayNet.add(netOpening);
