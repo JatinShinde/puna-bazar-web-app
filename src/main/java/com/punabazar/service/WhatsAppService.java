@@ -12,6 +12,7 @@ import com.punabazar.repository.WhatsAppTemplateRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
@@ -108,7 +109,12 @@ public class WhatsAppService {
         BigDecimal totalPaymentVal = payPoVal.add(payPcVal);
 
         BigDecimal commRateVal = customer.getCommissionRate() != null ? customer.getCommissionRate() : new BigDecimal("10.00");
-        BigDecimal commAmountVal = totalSellVal.multiply(commRateVal).divide(new BigDecimal("100"));
+        
+        // Commission % is ONLY calculated when there is profit (totalSellVal > totalPaymentVal / YENE)
+        BigDecimal commAmountVal = BigDecimal.ZERO;
+        if (totalSellVal.compareTo(totalPaymentVal) > 0) {
+            commAmountVal = totalSellVal.multiply(commRateVal).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+        }
         BigDecimal totalAfterCommVal = totalSellVal.subtract(commAmountVal);
         BigDecimal afterPayVal = totalAfterCommVal.subtract(totalPaymentVal);
 

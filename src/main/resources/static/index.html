@@ -288,14 +288,68 @@
                 <canvas id="receiptCanvas"></canvas>
             </div>
 
-            <!-- Main Actions: Share Photo to WhatsApp Web & App -->
+            <!-- Main Actions: Share Photo to WhatsApp & Edit Full Receipt -->
             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                 <button id="btnSharePhotoWeb" class="btn-launch-wa" onclick="shareReceiptPhotoToWhatsApp('web')">
-                    🌐 Share Photo on WhatsApp Web
+                    🌐 Share Photo on WhatsApp
                 </button>
-                <button id="btnSharePhotoApp" class="btn-action" style="background: #059669; color: #ffffff; width: 100%; border-radius: 0.75rem; padding: 0.75rem; font-weight: 700;" onclick="shareReceiptPhotoToWhatsApp('api')">
-                    📱 Open WhatsApp Mobile / Desktop App
+                <button id="btnEditReceipt" class="btn-action" style="background: #3b82f6; color: #ffffff; width: 100%; border-radius: 0.75rem; padding: 0.75rem; font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" onclick="toggleEditReceiptPanel()">
+                    ✏️ Edit Full Receipt
                 </button>
+            </div>
+
+            <!-- Full Receipt Live Editor Panel -->
+            <div id="waEditContainer" style="display: none; margin-top: 0.75rem; background: rgba(15, 23, 42, 0.98); border: 1.5px solid #3b82f6; border-radius: 0.85rem; padding: 0.85rem; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                    <span style="font-weight: 800; font-size: 0.85rem; color: #60a5fa; display: flex; align-items: center; gap: 0.4rem;">
+                        ✏️ Full Receipt Editor & Smart Calculator
+                    </span>
+                    <button onclick="toggleEditReceiptPanel()" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; padding: 0.25rem 0.6rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+                        Done Editing ✖
+                    </button>
+                </div>
+
+                <!-- Quick Fields Form Grid -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.6rem; background: #0b1329; padding: 0.6rem; border-radius: 0.6rem; border: 1px solid #1e293b;">
+                    <div>
+                        <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;">PO Sell (₹)</label>
+                        <input id="editPoSell" type="number" placeholder="0" style="width: 100%; background: #1e293b; color: #34d399; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.8rem; font-weight: 700;" oninput="onQuickFieldEdited()">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;">PO Payment (₹)</label>
+                        <input id="editPoPay" type="number" placeholder="0" style="width: 100%; background: #1e293b; color: #f87171; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.8rem; font-weight: 700;" oninput="onQuickFieldEdited()">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;">PC Sell (₹)</label>
+                        <input id="editPcSell" type="number" placeholder="0" style="width: 100%; background: #1e293b; color: #34d399; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.8rem; font-weight: 700;" oninput="onQuickFieldEdited()">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;">PC Payment (₹)</label>
+                        <input id="editPcPay" type="number" placeholder="0" style="width: 100%; background: #1e293b; color: #f87171; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.8rem; font-weight: 700;" oninput="onQuickFieldEdited()">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;">Magil Yene / Dene (₹)</label>
+                        <input id="editMagil" type="number" placeholder="0" style="width: 100%; background: #1e293b; color: #fbbf24; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.8rem; font-weight: 700;" oninput="onQuickFieldEdited()">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;">Pagar (₹)</label>
+                        <input id="editPagar" type="number" placeholder="0" style="width: 100%; background: #1e293b; color: #38bdf8; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.8rem; font-weight: 700;" oninput="onQuickFieldEdited()">
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <label style="font-size: 0.75rem; color: #a7f3d0; font-weight: 700; display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+                        <input id="chkAutoCalc" type="checkbox" checked onchange="onReceiptTextEdited()"> ⚡ Auto-Recalculate Totals
+                    </label>
+                    <button onclick="resetReceiptText()" style="background: none; border: none; color: #fbbf24; font-size: 0.75rem; cursor: pointer; text-decoration: underline;">
+                        🔄 Reset Text
+                    </button>
+                </div>
+
+                <!-- Raw Text Area -->
+                <textarea id="waReceiptEditText" rows="8" style="width: 100%; background: #0b1329; color: #38bdf8; border: 1px solid #334155; border-radius: 0.6rem; padding: 0.65rem; font-family: 'Courier New', monospace; font-size: 0.85rem; font-weight: 600; line-height: 1.4; resize: vertical;" oninput="onReceiptTextEdited()" onkeyup="onReceiptTextEdited()" onchange="onReceiptTextEdited()" onpaste="setTimeout(onReceiptTextEdited, 50)"></textarea>
+                
+                <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.4rem;">💡 Edit either the quick fields above OR the text box — receipt photo updates live!</p>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem;">

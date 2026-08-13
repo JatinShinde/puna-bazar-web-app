@@ -55,9 +55,9 @@ public class TransactionService {
         Transaction tx = new Transaction(customer, date, sellPo, sellPc, payPo, payPc, magilBaki, pagarAmount, totalSell);
         tx = transactionRepository.save(tx);
 
-        // 3. Compute and Save Commission
+        // 3. Compute and Save Commission (ONLY when totalSell > totalPayment / YENE)
         BigDecimal commPercent = request.getCommissionPercentage() != null ? request.getCommissionPercentage() : new BigDecimal("10.00");
-        BigDecimal commissionAmount = calculationEngineService.calculateCommission(totalSell, commPercent);
+        BigDecimal commissionAmount = calculationEngineService.calculateCommission(totalSell, totalPayment, commPercent);
         Commission commission = new Commission(tx, commPercent, commissionAmount);
         commissionRepository.save(commission);
 

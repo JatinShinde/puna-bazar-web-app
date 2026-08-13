@@ -413,7 +413,9 @@ function calculateMathPreview() {
     const isPagarEnabled = isPagarEnabledForCustomer(customer);
     const isShareEnabled = isShareEnabledForCustomer(customer);
 
-    const actualCommRate = isCommEnabled ? commRate : 0;
+    // Commission % is ONLY calculated when there is profit (totalSell > totalPayment / YENE)
+    const isProfit = totalSell > totalPayment;
+    const actualCommRate = (isCommEnabled && isProfit) ? commRate : 0;
     const commCut = (totalSell * actualCommRate) / 100.0;
     const totalAfterComm = totalSell - commCut;
     const afterPay = totalAfterComm - totalPayment;
@@ -710,7 +712,9 @@ async function triggerWhatsApp(customerId, autoShare = false) {
         const data = await res.json();
 
         if (document.getElementById('waCustomerName')) {
-            document.getElementById('waCustomerName').textContent = `${data.customerName} (${data.city})`;
+            const nameDisp = data.customerName || (customer ? customer.name : 'Customer Statement');
+            const cityDisp = data.city || (customer ? customer.city : '');
+            document.getElementById('waCustomerName').textContent = cityDisp ? `${nameDisp} (${cityDisp})` : nameDisp;
         }
         if (document.getElementById('waMessageText')) {
             document.getElementById('waMessageText').textContent = data.formattedMessage;
@@ -723,6 +727,12 @@ async function triggerWhatsApp(customerId, autoShare = false) {
 
         currentCleanMobile = cleanMobile;
         currentFormattedMessage = data.formattedMessage;
+        originalFormattedMessage = data.formattedMessage;
+
+        const editTextEl = document.getElementById('waReceiptEditText');
+        if (editTextEl) editTextEl.value = data.formattedMessage || '';
+        const editContainerEl = document.getElementById('waEditContainer');
+        if (editContainerEl) editContainerEl.style.display = 'none';
 
         const encodedMsg = encodeURIComponent(data.formattedMessage || '');
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -851,70 +861,111 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
         const trimmed = line.trim();
         let cleanText = line.replace(/\*/g, '').trim();
 
-        if (cleanText.startsWith('Date:')) {
-            const match = cleanText.match(/Date:\s*([^\s*]+)/i);
+        if (!cleanText) return;
+
+        // 1. Check Date Badge
+        if (cleanText.toLowerCase().includes('date:')) {
+            const match = cleanText.match(/date:\s*([^\s*]+)/i);
             if (match && match[1]) dateStr = match[1];
-        } else if (trimmed.startsWith('---') || trimmed.includes('-----') || trimmed.startsWith('___') || trimmed.includes('____')) {
+            return;
+        }
+
+        // 2. Check Divider Lines
+        if (trimmed.startsWith('---') || trimmed.includes('-----') || trimmed.startsWith('___') || trimmed.includes('____')) {
             if (parsedRows.length > 0 && parsedRows[parsedRows.length - 1].type !== 'divider') {
                 parsedRows.push({ type: 'divider' });
             }
-        } else if (cleanText.length > 0 && !cleanText.includes(':-') && !cleanText.includes(':') && !/\d/.test(cleanText) && !cleanText.includes('SELL')) {
-            cityTitle = cleanText.toUpperCase();
-        } else if (cleanText === 'MISS') {
-            pendingMissPrefix = true;
-        } else if (cleanText.includes('TOTAL BALANCE DUE')) {
+            return;
+        }
+
+        // 3. Check Total Balance Due Banner
+        if (cleanText.toUpperCase().includes('TOTAL BALANCE DUE')) {
             const parts = cleanText.split(/:-|:/);
             if (parts.length > 1) {
                 totalBalanceStr = parts[1].trim();
             } else {
-                totalBalanceStr = cleanText.replace('TOTAL BALANCE DUE', '').trim();
+                totalBalanceStr = cleanText.replace(/TOTAL BALANCE DUE/i, '').trim();
             }
-        } else if (cleanText.length > 0 && !cleanText.includes('SELL')) {
-            let isMagil = line.includes('🔴') || cleanText.includes('MAGIL');
-            cleanText = cleanText.replace(/🔴/g, '').trim();
+            return;
+        }
 
-            const parts = cleanText.split(/:-|:/);
-            let label = parts[0] ? parts[0].trim() : '';
+        // 4. Check Column Header Line (e.g. PARTICULARS SELL PAYMENT) -> Skip table header
+        if (cleanText.toUpperCase().includes('PARTICULARS') || (cleanText.toUpperCase().includes('SELL') && cleanText.toUpperCase().includes('PAYMENT') && !cleanText.includes(':'))) {
+            return;
+        }
 
-            if (pendingMissPrefix) {
-                label = 'MISS ' + label;
-                pendingMissPrefix = false;
-            }
+        // 5. Check Top Header Title (First non-numeric title line e.g. TEST123 or PUNE)
+        if (!/\d/.test(cleanText) && !cleanText.includes(':') && !cleanText.includes(':-') && parsedRows.length === 0) {
+            cityTitle = cleanText.toUpperCase();
+            return;
+        }
 
-            let isHighlight = label.startsWith('TOTAL') || label.startsWith('REMAINING');
+        // 6. Data Row
+        let isMagil = line.includes('🔴') || cleanText.toUpperCase().includes('MAGIL');
+        cleanText = cleanText.replace(/🔴/g, '').trim();
 
-            let sellVal = '';
-            let payVal = '';
+        const parts = cleanText.split(/:-|:/);
+        let label = parts[0] ? parts[0].trim() : '';
 
-            if (parts.length > 1) {
-                const valStr = parts.slice(1).join(':-').trim();
-                const numbers = valStr.match(/[\d,]+(\s*(yeṇe|dene|yeṇe|dene|yene))?/gi) || [];
+        if (pendingMissPrefix) {
+            label = 'MISS ' + label;
+            pendingMissPrefix = false;
+        }
 
-                if (numbers.length >= 2) {
-                    sellVal = numbers[0].trim();
-                    payVal = numbers[1].trim();
-                } else if (numbers.length === 1) {
+        let isHighlight = label.toUpperCase().startsWith('TOTAL') || label.toUpperCase().startsWith('REMAINING') || label.toUpperCase().startsWith('NET');
+
+        let sellVal = '';
+        let payVal = '';
+
+        if (parts.length >= 3) {
+            sellVal = parts[1].trim();
+            payVal = parts[2].trim();
+        } else if (parts.length === 2) {
+            const valStr = parts[1].trim();
+            const numbers = valStr.match(/[\d,.]+(\s*(yeṇe|dene|yene|dene))?/gi) || [];
+
+            if (numbers.length >= 2) {
+                sellVal = numbers[0].trim();
+                payVal = numbers[1].trim();
+            } else if (numbers.length === 1) {
+                if (label.toUpperCase().includes('PAYMENT')) {
+                    payVal = numbers[0].trim();
+                } else {
                     sellVal = numbers[0].trim();
                 }
+            } else {
+                if (label.toUpperCase().includes('PAYMENT')) {
+                    payVal = valStr;
+                } else {
+                    sellVal = valStr;
+                }
             }
-
-            parsedRows.push({
-                type: isHighlight ? 'highlight_row' : (isMagil ? 'magil_row' : 'row'),
-                label: label ? label + ' :-' : '',
-                sellVal: sellVal,
-                payVal: payVal,
-                isHighlight: isHighlight,
-                isMagil: isMagil
-            });
+        } else {
+            if (label.toUpperCase() === 'MISS') {
+                pendingMissPrefix = true;
+                return;
+            }
         }
+
+        parsedRows.push({
+            type: isHighlight ? 'highlight_row' : (isMagil ? 'magil_row' : 'row'),
+            label: label ? (label.endsWith(':-') || label.endsWith(':') ? label : label + ' :-') : '',
+            sellVal: sellVal,
+            payVal: payVal,
+            isHighlight: isHighlight,
+            isMagil: isMagil
+        });
     });
 
     if (!totalBalanceStr) {
         for (let i = parsedRows.length - 1; i >= 0; i--) {
             const r = parsedRows[i];
-            if (r.type !== 'divider' && r.sellVal && (r.sellVal.includes('yeṇe') || r.sellVal.includes('dene') || r.sellVal.includes('yene') || r.isHighlight)) {
-                totalBalanceStr = r.sellVal;
-                break;
+            if (r.type !== 'divider' && (r.sellVal || r.payVal)) {
+                if ((r.sellVal && (r.sellVal.includes('yeṇe') || r.sellVal.includes('dene') || r.sellVal.includes('yene'))) ||
+                    (r.payVal && (r.payVal.includes('yeṇe') || r.payVal.includes('dene') || r.payVal.includes('yene')))) {
+                    totalBalanceStr = r.sellVal || r.payVal;
+                    break;
+                }
             }
         }
     }
@@ -971,25 +1022,25 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
     ctx.textBaseline = 'top';
     ctx.fillText(displayHeaderTitle, canvasWidth / 2, 18 * scale);
 
-    // Date Pill Badge (#1e293b pill with border #334155)
+    // Date Pill Badge (#1e293b pill with border #334155) - Increased Size & Font
     const dateText = `DATE: ${dateStr}`;
-    ctx.font = `800 ${13 * scale}px ${fontStack}`;
-    const dateWidth = ctx.measureText(dateText).width + (24 * scale);
-    const dateHeight = 26 * scale;
+    ctx.font = `900 ${18 * scale}px ${fontStack}`;
+    const dateWidth = ctx.measureText(dateText).width + (32 * scale);
+    const dateHeight = 34 * scale;
     const dateX = (canvasWidth - dateWidth) / 2;
-    const dateY = 62 * scale;
+    const dateY = 60 * scale;
 
     ctx.fillStyle = '#1e293b';
-    ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 1.5 * scale;
-    drawRoundedRect(ctx, dateX, dateY, dateWidth, dateHeight, 13 * scale);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2 * scale;
+    drawRoundedRect(ctx, dateX, dateY, dateWidth, dateHeight, 17 * scale);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = '#f1f5f9';
+    ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(dateText, canvasWidth / 2, dateY + (dateHeight / 2));
+    ctx.fillText(dateText, canvasWidth / 2, dateY + (dateHeight / 2) + (1 * scale));
     ctx.restore();
 
     // 4. Column Headers (PARTICULARS   SELL (₹)   PAYMENT (₹))
@@ -1125,6 +1176,184 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
 }
 
 let currentFormattedMessage = '';
+let originalFormattedMessage = '';
+
+function toggleEditReceiptPanel() {
+    const editContainer = document.getElementById('waEditContainer');
+    const editText = document.getElementById('waReceiptEditText');
+    if (!editContainer) return;
+
+    const isHidden = editContainer.style.display === 'none' || !editContainer.style.display;
+    if (isHidden) {
+        editContainer.style.display = 'block';
+        if (editText) {
+            editText.value = currentFormattedMessage || '';
+            editText.focus();
+        }
+        populateQuickFieldsFromText(currentFormattedMessage || '');
+        editContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        editContainer.style.display = 'none';
+    }
+}
+
+function updateCalculatedValuesInText(text) {
+    if (!text) return text;
+    const lines = text.split('\n');
+
+    let sellPo = null, payPo = null;
+    let sellPc = null, payPc = null;
+    let commPct = 10;
+    let commVal = null;
+    let pagarVal = 0;
+    let magilVal = 0;
+
+    lines.forEach(l => {
+        const clean = l.replace(/\*/g, '').trim();
+        const upper = clean.toUpperCase();
+        if (upper.startsWith('PO :-') || upper.startsWith('PO:')) {
+            const parts = clean.split(/:-|:/);
+            if (parts.length >= 3) {
+                sellPo = parseFloat(parts[1].replace(/,/g, '')) || 0;
+                payPo = parseFloat(parts[2].replace(/,/g, '')) || 0;
+            } else if (parts.length === 2) {
+                sellPo = parseFloat(parts[1].replace(/,/g, '')) || 0;
+            }
+        } else if (upper.startsWith('PC :-') || upper.startsWith('PC:')) {
+            const parts = clean.split(/:-|:/);
+            if (parts.length >= 3) {
+                sellPc = parseFloat(parts[1].replace(/,/g, '')) || 0;
+                payPc = parseFloat(parts[2].replace(/,/g, '')) || 0;
+            } else if (parts.length === 2) {
+                sellPc = parseFloat(parts[1].replace(/,/g, '')) || 0;
+            }
+        } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
+            const commMatch = clean.match(/COM\s*\((\d+(\.\d+)?)%\)/i);
+            if (commMatch && commMatch[1]) commPct = parseFloat(commMatch[1]);
+        } else if (upper.includes('MAGIL')) {
+            const parts = clean.split(/:-|:/);
+            if (parts.length >= 2) {
+                magilVal = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
+            }
+        } else if (upper.startsWith('PAGAR')) {
+            const parts = clean.split(/:-|:/);
+            if (parts.length >= 2) {
+                pagarVal = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
+            }
+        }
+    });
+
+    if (sellPo === null && sellPc === null) return text;
+
+    const totalSell = (sellPo || 0) + (sellPc || 0);
+    const totalPay = (payPo || 0) + (payPc || 0);
+
+    // Commission % is ONLY calculated when there is profit (totalSell > totalPay / YENE)
+    if (totalSell > totalPay) {
+        commVal = Math.round(totalSell * (commPct / 100));
+    } else {
+        commVal = 0;
+    }
+
+    const totalAfterComm = totalSell - commVal;
+    const remaining = totalAfterComm - totalPay - pagarVal;
+    const netBal = remaining + magilVal;
+    const balSuffix = netBal >= 0 ? 'yeṇe' : 'dene';
+    const absBalStr = Math.abs(netBal).toLocaleString('en-IN');
+
+    let totalCount = 0;
+    const updatedLines = lines.map(line => {
+        const clean = line.replace(/\*/g, '').trim();
+        const upper = clean.toUpperCase();
+
+        if (upper.startsWith('TOTAL :-') || upper.startsWith('TOTAL:')) {
+            totalCount++;
+            if (totalCount === 1) {
+                return line.replace(/:-.*/, `:- ${totalSell.toLocaleString('en-IN')} : ${totalPay.toLocaleString('en-IN')}`);
+            } else if (totalCount === 2) {
+                return line.replace(/:-.*/, `:- ${totalAfterComm.toLocaleString('en-IN')}`);
+            }
+        } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
+            return line.replace(/:-.*/, `:- ${commVal.toLocaleString('en-IN')}`);
+        } else if (upper.startsWith('REMAINING :-') || upper.startsWith('REMAINING:')) {
+            return line.replace(/:-.*/, `:- ${remaining.toLocaleString('en-IN')}`);
+        } else if (upper.includes('TOTAL BALANCE DUE')) {
+            return line.replace(/TOTAL BALANCE DUE.*/i, `TOTAL BALANCE DUE ${absBalStr} ${balSuffix}`);
+        }
+        return line;
+    });
+
+    return updatedLines.join('\n');
+}
+
+function onQuickFieldEdited() {
+    const sellPo = parseFloat(document.getElementById('editPoSell').value) || 0;
+    const payPo = parseFloat(document.getElementById('editPoPay').value) || 0;
+    const sellPc = parseFloat(document.getElementById('editPcSell').value) || 0;
+    const payPc = parseFloat(document.getElementById('editPcPay').value) || 0;
+    const magil = parseFloat(document.getElementById('editMagil').value) || 0;
+    const pagar = parseFloat(document.getElementById('editPagar').value) || 0;
+
+    let text = document.getElementById('waReceiptEditText').value || currentFormattedMessage || '';
+    const lines = text.split('\n');
+
+    const updatedLines = lines.map(line => {
+        const clean = line.replace(/\*/g, '').trim();
+        const upper = clean.toUpperCase();
+        if (upper.startsWith('PO :-') || upper.startsWith('PO:')) {
+            return line.replace(/:-.*/, `:- ${sellPo.toLocaleString('en-IN')} : ${payPo.toLocaleString('en-IN')}`);
+        } else if (upper.startsWith('PC :-') || upper.startsWith('PC:')) {
+            return line.replace(/:-.*/, `:- ${sellPc.toLocaleString('en-IN')} : ${payPc.toLocaleString('en-IN')}`);
+        } else if (upper.includes('MAGIL')) {
+            return line.replace(/:-.*/, `:- ${magil.toLocaleString('en-IN')}`);
+        } else if (upper.startsWith('PAGAR')) {
+            return line.replace(/:-.*/, `:- ${pagar.toLocaleString('en-IN')}`);
+        }
+        return line;
+    });
+
+    let newText = updatedLines.join('\n');
+    newText = updateCalculatedValuesInText(newText);
+
+    currentFormattedMessage = newText;
+    const editText = document.getElementById('waReceiptEditText');
+    if (editText) editText.value = newText;
+
+    renderReceiptImageCanvas(newText, currentCustomerName);
+}
+
+function onReceiptTextEdited() {
+    const editText = document.getElementById('waReceiptEditText');
+    if (!editText) return;
+
+    let newText = editText.value;
+    const autoCalc = document.getElementById('chkAutoCalc') ? document.getElementById('chkAutoCalc').checked : true;
+
+    if (autoCalc) {
+        newText = updateCalculatedValuesInText(newText);
+    }
+
+    currentFormattedMessage = newText;
+
+    let cleanMobile = currentCleanMobile || '';
+    const encodedMsg = encodeURIComponent(newText || '');
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    currentWaLink = cleanMobile 
+        ? (isMobile ? `https://api.whatsapp.com/send?phone=${cleanMobile}&text=${encodedMsg}` : `https://web.whatsapp.com/send?phone=${cleanMobile}&text=${encodedMsg}`)
+        : (isMobile ? `https://api.whatsapp.com/send` : `https://web.whatsapp.com`);
+
+    renderReceiptImageCanvas(newText, currentCustomerName);
+}
+
+function resetReceiptText() {
+    if (!originalFormattedMessage) return;
+    const editText = document.getElementById('waReceiptEditText');
+    if (editText) {
+        editText.value = originalFormattedMessage;
+        populateQuickFieldsFromText(originalFormattedMessage);
+        onReceiptTextEdited();
+    }
+}
 
 // Direct 1-Click WhatsApp Photo Share to Customer Mobile Number
 async function shareReceiptPhotoToWhatsApp(targetMode) {

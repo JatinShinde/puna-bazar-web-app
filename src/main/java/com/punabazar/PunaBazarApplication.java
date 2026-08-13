@@ -10,7 +10,7 @@ public class PunaBazarApplication {
         SpringApplication.run(PunaBazarApplication.class, args);
         System.out.println("==========================================================");
         System.out.println("🚩 Pune Bazar WhatsApp Calculator & Ledger System Started!");
-        System.out.println("🌐 URL: http://localhost:8080");
+        System.out.println("🌐 URL: http://localhost:8085");
         System.out.println("🔑 Default Admin: admin / admin123");
         System.out.println("==========================================================");
     }
