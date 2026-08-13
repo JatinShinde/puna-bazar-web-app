@@ -742,6 +742,7 @@ async function triggerWhatsApp(customerId, autoShare = false) {
 
         const editTextEl = document.getElementById('waReceiptEditText');
         if (editTextEl) editTextEl.value = data.formattedMessage || '';
+        populateQuickFieldsFromText(data.formattedMessage || '');
         const editContainerEl = document.getElementById('waEditContainer');
         if (editContainerEl) editContainerEl.style.display = 'none';
 
@@ -1297,6 +1298,55 @@ function updateCalculatedValuesInText(text) {
     });
 
     return updatedLines.join('\n');
+}
+
+function populateQuickFieldsFromText(text) {
+    if (!text) return;
+    const lines = text.split('\n');
+
+    let poSell = null, poPay = null;
+    let pcSell = null, pcPay = null;
+    let magil = null, pagar = null;
+
+    lines.forEach(line => {
+        const clean = line.replace(/\*/g, '').trim();
+        const upper = clean.toUpperCase();
+
+        if (upper.startsWith('PO :-') || upper.startsWith('PO:')) {
+            const parts = clean.split(/:-|:/);
+            if (parts.length >= 3) {
+                poSell = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
+                poPay = parseFloat(parts[2].replace(/[^0-9.]/g, ''));
+            } else if (parts.length === 2) {
+                poSell = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
+            }
+        } else if (upper.startsWith('PC :-') || upper.startsWith('PC:')) {
+            const parts = clean.split(/:-|:/);
+            if (parts.length >= 3) {
+                pcSell = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
+                pcPay = parseFloat(parts[2].replace(/[^0-9.]/g, ''));
+            } else if (parts.length === 2) {
+                pcSell = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
+            }
+        } else if (upper.includes('MAGIL')) {
+            const parts = clean.split(/:-|:/);
+            if (parts.length >= 2) {
+                magil = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
+            }
+        } else if (upper.startsWith('PAGAR')) {
+            const parts = clean.split(/:-|:/);
+            if (parts.length >= 2) {
+                pagar = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
+            }
+        }
+    });
+
+    if (document.getElementById('editPoSell') && poSell !== null && !isNaN(poSell)) document.getElementById('editPoSell').value = poSell;
+    if (document.getElementById('editPoPay') && poPay !== null && !isNaN(poPay)) document.getElementById('editPoPay').value = poPay;
+    if (document.getElementById('editPcSell') && pcSell !== null && !isNaN(pcSell)) document.getElementById('editPcSell').value = pcSell;
+    if (document.getElementById('editPcPay') && pcPay !== null && !isNaN(pcPay)) document.getElementById('editPcPay').value = pcPay;
+    if (document.getElementById('editMagil') && magil !== null && !isNaN(magil)) document.getElementById('editMagil').value = magil;
+    if (document.getElementById('editPagar') && pagar !== null && !isNaN(pagar)) document.getElementById('editPagar').value = pagar;
 }
 
 function onQuickFieldEdited() {
