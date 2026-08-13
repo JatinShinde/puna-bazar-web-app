@@ -108,11 +108,12 @@ public class WhatsAppService {
         BigDecimal totalSellVal = sellPoVal.add(sellPcVal);
         BigDecimal totalPaymentVal = payPoVal.add(payPcVal);
 
+        boolean isCommEnabled = Boolean.TRUE.equals(customer.getCommissionEnabled());
         BigDecimal commRateVal = customer.getCommissionRate() != null ? customer.getCommissionRate() : new BigDecimal("10.00");
         
-        // Commission % is ONLY calculated when there is profit (totalSellVal > totalPaymentVal / YENE)
+        // Commission is ONLY calculated if selected/enabled for customer (always applies on totalSell)
         BigDecimal commAmountVal = BigDecimal.ZERO;
-        if (totalSellVal.compareTo(totalPaymentVal) > 0) {
+        if (isCommEnabled) {
             commAmountVal = totalSellVal.multiply(commRateVal).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
         }
         BigDecimal totalAfterCommVal = totalSellVal.subtract(commAmountVal);
@@ -202,9 +203,11 @@ public class WhatsAppService {
             sb.append(formatTableRow("TOTAL", totalSellVal, totalPaymentVal)).append("\n");
             sb.append("-----------------------------------------------------\n");
 
-            sb.append("*COM (").append(commRateVal.stripTrailingZeros().toPlainString()).append("%):-  ").append(fmtNum(commAmountVal)).append("*\n");
-            sb.append("---------------------------------\n");
-            sb.append("*TOTAL:-           ").append(fmtNum(totalAfterCommVal)).append("*\n");
+            if (isCommEnabled) {
+                sb.append("*COM (").append(commRateVal.stripTrailingZeros().toPlainString()).append("%):-  ").append(fmtNum(commAmountVal)).append("*\n");
+                sb.append("---------------------------------\n");
+                sb.append("*TOTAL:-           ").append(fmtNum(totalAfterCommVal)).append("*\n");
+            }
             sb.append("*PAYMENT:-     ").append(fmtNum(totalPaymentVal)).append("*\n");
             sb.append("---------------------------------\n");
 

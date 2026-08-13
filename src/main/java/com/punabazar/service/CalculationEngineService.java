@@ -16,21 +16,15 @@ public class CalculationEngineService {
     }
 
     public BigDecimal calculateCommission(BigDecimal totalSell, BigDecimal commissionPercentage) {
-        return calculateCommission(totalSell, BigDecimal.ZERO, commissionPercentage);
-    }
-
-    public BigDecimal calculateCommission(BigDecimal totalSell, BigDecimal totalPayment, BigDecimal commissionPercentage) {
         if (totalSell == null) totalSell = BigDecimal.ZERO;
-        if (totalPayment == null) totalPayment = BigDecimal.ZERO;
         if (commissionPercentage == null) commissionPercentage = new BigDecimal("10.00");
-
-        // Commission is ONLY calculated when there is profit (totalSell > totalPayment / YENE)
-        if (totalSell.compareTo(totalPayment) <= 0) {
-            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        }
 
         return totalSell.multiply(commissionPercentage)
                 .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateCommission(BigDecimal totalSell, BigDecimal totalPayment, BigDecimal commissionPercentage) {
+        return calculateCommission(totalSell, commissionPercentage);
     }
 
     public BigDecimal calculateNetBalanceDue(BigDecimal previousBalance, BigDecimal totalSell, BigDecimal commissionAmount, BigDecimal paymentAmount) {

@@ -413,9 +413,8 @@ function calculateMathPreview() {
     const isPagarEnabled = isPagarEnabledForCustomer(customer);
     const isShareEnabled = isShareEnabledForCustomer(customer);
 
-    // Commission % is ONLY calculated when there is profit (totalSell > totalPayment / YENE)
-    const isProfit = totalSell > totalPayment;
-    const actualCommRate = (isCommEnabled && isProfit) ? commRate : 0;
+    // Commission is calculated whenever enabled for customer (regardless of payment vs sell)
+    const actualCommRate = isCommEnabled ? commRate : 0;
     const commCut = (totalSell * actualCommRate) / 100.0;
     const totalAfterComm = totalSell - commCut;
     const afterPay = totalAfterComm - totalPayment;
@@ -1207,6 +1206,7 @@ function updateCalculatedValuesInText(text) {
     let commVal = null;
     let pagarVal = 0;
     let magilVal = 0;
+    let hasCommLine = false;
 
     lines.forEach(l => {
         const clean = l.replace(/\*/g, '').trim();
@@ -1228,6 +1228,7 @@ function updateCalculatedValuesInText(text) {
                 sellPc = parseFloat(parts[1].replace(/,/g, '')) || 0;
             }
         } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
+            hasCommLine = true;
             const commMatch = clean.match(/COM\s*\((\d+(\.\d+)?)%\)/i);
             if (commMatch && commMatch[1]) commPct = parseFloat(commMatch[1]);
         } else if (upper.includes('MAGIL')) {
@@ -1248,8 +1249,8 @@ function updateCalculatedValuesInText(text) {
     const totalSell = (sellPo || 0) + (sellPc || 0);
     const totalPay = (payPo || 0) + (payPc || 0);
 
-    // Commission % is ONLY calculated when there is profit (totalSell > totalPay / YENE)
-    if (totalSell > totalPay) {
+    // Commission is calculated if statement has a COM line (always applies on totalSell)
+    if (hasCommLine) {
         commVal = Math.round(totalSell * (commPct / 100));
     } else {
         commVal = 0;
