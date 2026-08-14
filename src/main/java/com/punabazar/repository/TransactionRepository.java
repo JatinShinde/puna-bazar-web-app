@@ -15,5 +15,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("SELECT SUM(t.totalSell) FROM Transaction t WHERE t.transactionDate = :date")
     Double getTodayTotalSell(@Param("date") LocalDate date);
 
+    @Query("SELECT SUM(t.sellPo) FROM Transaction t WHERE t.transactionDate = :date")
+    Double getTodayPoSell(@Param("date") LocalDate date);
+
+    @Query("SELECT SUM(t.sellPcAmount) FROM Transaction t WHERE t.transactionDate = :date")
+    Double getTodayPcSell(@Param("date") LocalDate date);
+
     void deleteByCustomerId(Long customerId);
 }

@@ -35,9 +35,13 @@
         <section class="kpi-grid">
             <div class="kpi-card">
                 <div class="kpi-icon sell">📊</div>
-                <div class="kpi-data">
+                <div class="kpi-data" style="width: 100%;">
                     <h3>Today's Total Sell</h3>
                     <div class="value" id="kpiTotalSell">₹0.00</div>
+                    <div class="kpi-sub-row">
+                        <span class="sub-badge">PO: <strong id="kpiPoSell" style="color: #34d399;">₹0.00</strong></span>
+                        <span class="sub-badge">PC: <strong id="kpiPcSell" style="color: #60a5fa;">₹0.00</strong></span>
+                    </div>
                 </div>
             </div>
 
@@ -54,6 +58,18 @@
                 <div class="kpi-data">
                     <h3>Today's Commission</h3>
                     <div class="value" id="kpiTotalCommission">₹0.00</div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon profit-loss" id="kpiProfitLossIcon">📈</div>
+                <div class="kpi-data" style="width: 100%;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.25rem;">
+                        <h3>Today's Profit / Loss</h3>
+                        <span id="kpiProfitLossBadge" class="kpi-badge profit">PROFIT</span>
+                    </div>
+                    <div class="value" id="kpiProfitLoss" style="color: #34d399;">₹0.00</div>
+                    <div style="font-size: 0.6875rem; color: var(--text-muted); margin-top: 0.15rem;">(Excl. Magil Yene / Dene)</div>
                 </div>
             </div>
 

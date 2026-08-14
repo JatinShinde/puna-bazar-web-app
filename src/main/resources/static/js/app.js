@@ -244,16 +244,35 @@ async function checkAuth() {
     }
 }
 
-// 2. Load Real-Time Dashboard Metrics
 async function loadDashboardMetrics() {
     try {
         const res = await fetch('/api/dashboard/metrics');
         const data = await res.json();
 
-        document.getElementById('kpiTotalSell').textContent = formatCurrency(data.todayTotalSell);
-        document.getElementById('kpiTotalPayment').textContent = formatCurrency(data.todayTotalPayment);
-        document.getElementById('kpiTotalCommission').textContent = formatCurrency(data.todayTotalCommission);
-        document.getElementById('kpiCustomerBalance').textContent = formatCurrency(data.totalCustomerBalance);
+        if (document.getElementById('kpiTotalSell')) document.getElementById('kpiTotalSell').textContent = formatCurrency(data.todayTotalSell);
+        if (document.getElementById('kpiPoSell')) document.getElementById('kpiPoSell').textContent = formatCurrency(data.todayPoSell || 0);
+        if (document.getElementById('kpiPcSell')) document.getElementById('kpiPcSell').textContent = formatCurrency(data.todayPcSell || 0);
+        if (document.getElementById('kpiTotalPayment')) document.getElementById('kpiTotalPayment').textContent = formatCurrency(data.todayTotalPayment);
+        if (document.getElementById('kpiTotalCommission')) document.getElementById('kpiTotalCommission').textContent = formatCurrency(data.todayTotalCommission);
+        if (document.getElementById('kpiCustomerBalance')) document.getElementById('kpiCustomerBalance').textContent = formatCurrency(data.totalCustomerBalance);
+
+        const plVal = parseFloat(data.todayProfitLoss) || 0;
+        const plStatus = data.todayProfitLossStatus || 'PROFIT';
+        const plEl = document.getElementById('kpiProfitLoss');
+        const plBadge = document.getElementById('kpiProfitLossBadge');
+        const plIcon = document.getElementById('kpiProfitLossIcon');
+
+        if (plEl) {
+            plEl.textContent = formatCurrency(plVal);
+            plEl.style.color = plStatus === 'PROFIT' ? '#34d399' : '#f87171';
+        }
+        if (plBadge) {
+            plBadge.textContent = plStatus === 'PROFIT' ? 'PROFIT' : 'LOSS';
+            plBadge.className = plStatus === 'PROFIT' ? 'kpi-badge profit' : 'kpi-badge loss';
+        }
+        if (plIcon) {
+            plIcon.textContent = plStatus === 'PROFIT' ? '📈' : '📉';
+        }
     } catch (err) {
         console.error('Failed to load KPI metrics:', err);
     }

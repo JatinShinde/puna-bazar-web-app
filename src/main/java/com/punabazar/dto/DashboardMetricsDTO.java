@@ -5,31 +5,55 @@ import java.util.List;
 
 public class DashboardMetricsDTO {
     private BigDecimal todayTotalSell;
+    private BigDecimal todayPoSell;
+    private BigDecimal todayPcSell;
     private BigDecimal todayTotalPayment;
     private BigDecimal todayTotalCommission;
+    private BigDecimal todayProfitLoss;
+    private String todayProfitLossStatus;
     private BigDecimal totalCustomerBalance;
     private Long activeCustomerCount;
     private List<String> activeMarkets;
 
     public DashboardMetricsDTO() {}
 
-    public DashboardMetricsDTO(BigDecimal todayTotalSell, BigDecimal todayTotalPayment, BigDecimal todayTotalCommission, BigDecimal totalCustomerBalance, Long activeCustomerCount, List<String> activeMarkets) {
+    public DashboardMetricsDTO(BigDecimal todayTotalSell, BigDecimal todayPoSell, BigDecimal todayPcSell, BigDecimal todayTotalPayment, BigDecimal todayTotalCommission, BigDecimal todayProfitLoss, String todayProfitLossStatus, BigDecimal totalCustomerBalance, Long activeCustomerCount, List<String> activeMarkets) {
         this.todayTotalSell = todayTotalSell;
+        this.todayPoSell = todayPoSell;
+        this.todayPcSell = todayPcSell;
         this.todayTotalPayment = todayTotalPayment;
         this.todayTotalCommission = todayTotalCommission;
+        this.todayProfitLoss = todayProfitLoss;
+        this.todayProfitLossStatus = todayProfitLossStatus;
         this.totalCustomerBalance = totalCustomerBalance;
         this.activeCustomerCount = activeCustomerCount;
         this.activeMarkets = activeMarkets;
     }
 
+    public DashboardMetricsDTO(BigDecimal todayTotalSell, BigDecimal todayTotalPayment, BigDecimal todayTotalCommission, BigDecimal totalCustomerBalance, Long activeCustomerCount, List<String> activeMarkets) {
+        this(todayTotalSell, BigDecimal.ZERO, BigDecimal.ZERO, todayTotalPayment, todayTotalCommission, BigDecimal.ZERO, "PROFIT", totalCustomerBalance, activeCustomerCount, activeMarkets);
+    }
+
     public BigDecimal getTodayTotalSell() { return todayTotalSell; }
     public void setTodayTotalSell(BigDecimal todayTotalSell) { this.todayTotalSell = todayTotalSell; }
+
+    public BigDecimal getTodayPoSell() { return todayPoSell; }
+    public void setTodayPoSell(BigDecimal todayPoSell) { this.todayPoSell = todayPoSell; }
+
+    public BigDecimal getTodayPcSell() { return todayPcSell; }
+    public void setTodayPcSell(BigDecimal todayPcSell) { this.todayPcSell = todayPcSell; }
 
     public BigDecimal getTodayTotalPayment() { return todayTotalPayment; }
     public void setTodayTotalPayment(BigDecimal todayTotalPayment) { this.todayTotalPayment = todayTotalPayment; }
 
     public BigDecimal getTodayTotalCommission() { return todayTotalCommission; }
     public void setTodayTotalCommission(BigDecimal todayTotalCommission) { this.todayTotalCommission = todayTotalCommission; }
+
+    public BigDecimal getTodayProfitLoss() { return todayProfitLoss; }
+    public void setTodayProfitLoss(BigDecimal todayProfitLoss) { this.todayProfitLoss = todayProfitLoss; }
+
+    public String getTodayProfitLossStatus() { return todayProfitLossStatus; }
+    public void setTodayProfitLossStatus(String todayProfitLossStatus) { this.todayProfitLossStatus = todayProfitLossStatus; }
 
     public BigDecimal getTotalCustomerBalance() { return totalCustomerBalance; }
     public void setTotalCustomerBalance(BigDecimal totalCustomerBalance) { this.totalCustomerBalance = totalCustomerBalance; }
