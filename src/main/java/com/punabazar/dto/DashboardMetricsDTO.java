@@ -14,10 +14,16 @@ public class DashboardMetricsDTO {
     private BigDecimal totalCustomerBalance;
     private Long activeCustomerCount;
     private List<String> activeMarkets;
+    private Long generatedReceiptCount;
+    private Long totalCustomerCount;
 
     public DashboardMetricsDTO() {}
 
     public DashboardMetricsDTO(BigDecimal todayTotalSell, BigDecimal todayPoSell, BigDecimal todayPcSell, BigDecimal todayTotalPayment, BigDecimal todayTotalCommission, BigDecimal todayProfitLoss, String todayProfitLossStatus, BigDecimal totalCustomerBalance, Long activeCustomerCount, List<String> activeMarkets) {
+        this(todayTotalSell, todayPoSell, todayPcSell, todayTotalPayment, todayTotalCommission, todayProfitLoss, todayProfitLossStatus, totalCustomerBalance, activeCustomerCount, activeMarkets, 0L, activeCustomerCount);
+    }
+
+    public DashboardMetricsDTO(BigDecimal todayTotalSell, BigDecimal todayPoSell, BigDecimal todayPcSell, BigDecimal todayTotalPayment, BigDecimal todayTotalCommission, BigDecimal todayProfitLoss, String todayProfitLossStatus, BigDecimal totalCustomerBalance, Long activeCustomerCount, List<String> activeMarkets, Long generatedReceiptCount, Long totalCustomerCount) {
         this.todayTotalSell = todayTotalSell;
         this.todayPoSell = todayPoSell;
         this.todayPcSell = todayPcSell;
@@ -28,10 +34,12 @@ public class DashboardMetricsDTO {
         this.totalCustomerBalance = totalCustomerBalance;
         this.activeCustomerCount = activeCustomerCount;
         this.activeMarkets = activeMarkets;
+        this.generatedReceiptCount = generatedReceiptCount;
+        this.totalCustomerCount = totalCustomerCount;
     }
 
     public DashboardMetricsDTO(BigDecimal todayTotalSell, BigDecimal todayTotalPayment, BigDecimal todayTotalCommission, BigDecimal totalCustomerBalance, Long activeCustomerCount, List<String> activeMarkets) {
-        this(todayTotalSell, BigDecimal.ZERO, BigDecimal.ZERO, todayTotalPayment, todayTotalCommission, BigDecimal.ZERO, "PROFIT", totalCustomerBalance, activeCustomerCount, activeMarkets);
+        this(todayTotalSell, BigDecimal.ZERO, BigDecimal.ZERO, todayTotalPayment, todayTotalCommission, BigDecimal.ZERO, "PROFIT", totalCustomerBalance, activeCustomerCount, activeMarkets, 0L, activeCustomerCount);
     }
 
     public BigDecimal getTodayTotalSell() { return todayTotalSell; }
@@ -63,4 +71,10 @@ public class DashboardMetricsDTO {
 
     public List<String> getActiveMarkets() { return activeMarkets; }
     public void setActiveMarkets(List<String> activeMarkets) { this.activeMarkets = activeMarkets; }
+
+    public Long getGeneratedReceiptCount() { return generatedReceiptCount; }
+    public void setGeneratedReceiptCount(Long generatedReceiptCount) { this.generatedReceiptCount = generatedReceiptCount; }
+
+    public Long getTotalCustomerCount() { return totalCustomerCount; }
+    public void setTotalCustomerCount(Long totalCustomerCount) { this.totalCustomerCount = totalCustomerCount; }
 }

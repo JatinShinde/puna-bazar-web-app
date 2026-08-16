@@ -179,13 +179,13 @@ public class CustomerService {
 
     @Transactional
     public void deleteCustomer(Long id) {
-        Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + id));
-
-        commissionRepository.deleteByCustomerId(id);
-        transactionRepository.deleteByCustomerId(id);
-        paymentRepository.deleteByCustomerId(id);
-        ledgerRepository.deleteByCustomerId(id);
-        customerRepository.delete(customer);
+        if (id == null) return;
+        customerRepository.findById(id).ifPresent(customer -> {
+            commissionRepository.deleteByCustomerId(id);
+            transactionRepository.deleteByCustomerId(id);
+            paymentRepository.deleteByCustomerId(id);
+            ledgerRepository.deleteByCustomerId(id);
+            customerRepository.delete(customer);
+        });
     }
 }

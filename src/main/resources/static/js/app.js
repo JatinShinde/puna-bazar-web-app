@@ -14,8 +14,11 @@ function isShareEnabledForCustomer(customer) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Set default date to today
-    document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
+    const localDate = new Date();
+    const localYyyy = localDate.getFullYear();
+    const localMm = String(localDate.getMonth() + 1).padStart(2, '0');
+    const localDd = String(localDate.getDate()).padStart(2, '0');
+    if (document.getElementById('txDate')) document.getElementById('txDate').value = `${localYyyy}-${localMm}-${localDd}`;
 
     // Initial Loaders
     checkAuth();
@@ -146,7 +149,11 @@ function updateInputFieldsVisibility(receiptStyle) {
 
     // Search and Market Filter Chips
     document.getElementById('searchInput').addEventListener('input', (e) => {
-        loadCustomers(e.target.value, getSelectedMarket());
+        if (currentSegment === 'weekly') {
+            renderWeeklyTable(weeklyReceiptsData);
+        } else {
+            loadCustomers(e.target.value, getSelectedMarket());
+        }
     });
 
     document.querySelectorAll('.market-chips .chip').forEach(chip => {
@@ -154,7 +161,11 @@ function updateInputFieldsVisibility(receiptStyle) {
             document.querySelectorAll('.market-chips .chip').forEach(c => c.classList.remove('active'));
             e.target.classList.add('active');
             const market = e.target.getAttribute('data-market');
-            loadCustomers(document.getElementById('searchInput').value, market);
+            if (currentSegment === 'weekly') {
+                renderWeeklyTable(weeklyReceiptsData);
+            } else {
+                loadCustomers(document.getElementById('searchInput').value, market);
+            }
         });
     });
 
@@ -255,6 +266,15 @@ async function loadDashboardMetrics() {
         if (document.getElementById('kpiTotalPayment')) document.getElementById('kpiTotalPayment').textContent = formatCurrency(data.todayTotalPayment);
         if (document.getElementById('kpiTotalCommission')) document.getElementById('kpiTotalCommission').textContent = formatCurrency(data.todayTotalCommission);
         if (document.getElementById('kpiCustomerBalance')) document.getElementById('kpiCustomerBalance').textContent = formatCurrency(data.totalCustomerBalance);
+
+        if (document.getElementById('kpiGeneratedReceipts')) {
+            const genCount = data.generatedReceiptCount != null ? data.generatedReceiptCount : 0;
+            document.getElementById('kpiGeneratedReceipts').textContent = genCount;
+        }
+        if (document.getElementById('kpiMarketSubtext')) {
+            const totCount = data.totalCustomerCount != null ? data.totalCustomerCount : (data.activeCustomerCount || 0);
+            document.getElementById('kpiMarketSubtext').textContent = `out of ${totCount} Markets`;
+        }
 
         const plVal = parseFloat(data.todayProfitLoss) || 0;
         const plStatus = data.todayProfitLossStatus || 'PROFIT';
@@ -359,6 +379,202 @@ function renderCustomerTable(list) {
         tbody.appendChild(tr);
     });
 }
+
+let currentSegment = 'daily';
+let weeklyReceiptsData = [];
+
+window.switchChartSegment = function(segment) {
+    currentSegment = segment;
+    const tabDaily = document.getElementById('tabDailyChart');
+    const tabWeekly = document.getElementById('tabWeeklyChart');
+    const dailyContainer = document.getElementById('dailyChartContainer');
+    const weeklyContainer = document.getElementById('weeklyChartContainer');
+
+    if (segment === 'weekly') {
+        if (tabDaily) tabDaily.classList.remove('active');
+        if (tabWeekly) tabWeekly.classList.add('active');
+        if (dailyContainer) dailyContainer.style.display = 'none';
+        if (weeklyContainer) weeklyContainer.style.display = 'block';
+        loadWeeklyReceipts();
+    } else {
+        if (tabWeekly) tabWeekly.classList.remove('active');
+        if (tabDaily) tabDaily.classList.add('active');
+        if (weeklyContainer) weeklyContainer.style.display = 'none';
+        if (dailyContainer) dailyContainer.style.display = 'block';
+        loadCustomers('', getSelectedMarket());
+    }
+};
+
+async function loadWeeklyReceipts() {
+    try {
+        const res = await fetch('/api/weekly-receipts');
+        weeklyReceiptsData = await res.json();
+        renderWeeklyTable(weeklyReceiptsData);
+    } catch (err) {
+        console.error('Failed to load weekly receipts:', err);
+    }
+}
+
+function renderWeeklyTable(list) {
+    const tbody = document.getElementById('weeklyTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const selectedMarket = getSelectedMarket();
+    const searchVal = (document.getElementById('searchInput') ? document.getElementById('searchInput').value : '').toLowerCase().trim();
+
+    let filtered = (list || []).filter(item => {
+        const matchesMarket = selectedMarket === 'ALL' || (item.city && item.city.toLowerCase() === selectedMarket.toLowerCase());
+        const matchesSearch = !searchVal || (item.customerName && item.customerName.toLowerCase().includes(searchVal)) || (item.city && item.city.toLowerCase().includes(searchVal));
+        return matchesMarket && matchesSearch;
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 1rem;">No weekly receipt records found for selected market.</td></tr>';
+        return;
+    }
+
+    filtered.forEach(item => {
+        const tr = document.createElement('tr');
+
+        const formatCell = (val) => {
+            if (val == null || val === 0) return '<span style="color: #64748b; font-weight: 400;">-</span>';
+            const isPos = val >= 0;
+            const color = isPos ? '#34d399' : '#f87171';
+            const suffix = isPos ? 'y' : 'd';
+            return `<span style="font-weight: 700; color: ${color};">₹${Math.abs(val).toLocaleString('en-IN')} <small>${suffix}</small></span>`;
+        };
+
+        const totalNet = item.weeklyTotalNet || 0;
+        const totalColor = totalNet >= 0 ? '#34d399' : '#f87171';
+        const totalStatusStr = item.weeklyTotalStatus === 'DENE' ? 'dene' : 'yeṇe';
+
+        tr.innerHTML = `
+            <td>
+                <strong style="color: #ffffff;">${escapeHtml(item.customerName)}</strong>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(item.city || 'General')}</div>
+            </td>
+            <td style="text-align: center;">${formatCell(item.mondayNet)}</td>
+            <td style="text-align: center;">${formatCell(item.tuesdayNet)}</td>
+            <td style="text-align: center;">${formatCell(item.wednesdayNet)}</td>
+            <td style="text-align: center;">${formatCell(item.thursdayNet)}</td>
+            <td style="text-align: center;">${formatCell(item.fridayNet)}</td>
+            <td style="text-align: center;">${formatCell(item.saturdayNet)}</td>
+            <td style="text-align: center;">${formatCell(item.sundayNet)}</td>
+            <td style="text-align: right; font-weight: 800; color: ${totalColor};">
+                ₹${Math.abs(totalNet).toLocaleString('en-IN')} <div style="font-size: 0.7rem; font-weight: 600;">${totalStatusStr}</div>
+            </td>
+            <td style="text-align: center;">
+                <div style="display: flex; gap: 0.35rem; justify-content: center;">
+                    <button onclick="shareWeeklyWhatsApp(${item.customerId})" class="btn-whatsapp" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">
+                        <span>📲 Share</span>
+                    </button>
+                    <button onclick="editWeeklyReceipt(${item.customerId})" class="chip" style="margin:0; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.75rem; padding: 0.3rem 0.6rem;">
+                        ✏️ Edit
+                    </button>
+                </div>
+            </td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+}
+
+window.shareWeeklyWhatsApp = function(customerId) {
+    const item = weeklyReceiptsData.find(w => w.customerId == customerId);
+    if (!item || !item.formattedWeeklyMessage) return;
+
+    currentFormattedMessage = item.formattedWeeklyMessage;
+    const editTextEl = document.getElementById('waReceiptEditText');
+    if (editTextEl) editTextEl.value = item.formattedWeeklyMessage;
+    if (document.getElementById('waCustomerName')) {
+        document.getElementById('waCustomerName').textContent = `Weekly Statement - ${item.customerName}`;
+    }
+
+    if (document.getElementById('btnEditReceipt')) document.getElementById('btnEditReceipt').style.display = 'none';
+    if (document.getElementById('waEditContainer')) document.getElementById('waEditContainer').style.display = 'none';
+
+    openModal('whatsappModal');
+    renderReceiptImageCanvas(item.formattedWeeklyMessage, item.customerName);
+};
+
+window.editWeeklyReceipt = function(customerId) {
+    const item = weeklyReceiptsData.find(w => w.customerId == customerId);
+    if (!item) return;
+
+    if (document.getElementById('editWeeklyCustId')) document.getElementById('editWeeklyCustId').value = customerId;
+    if (document.getElementById('weeklyEditTitle')) document.getElementById('weeklyEditTitle').textContent = `✏️ Weekly Commission - ${item.customerName}`;
+
+    let commPct = 0;
+    if (item.formattedWeeklyMessage) {
+        const match = item.formattedWeeklyMessage.match(/COM\s*\((\d+(\.\d+)?)%\)/i);
+        if (match && match[1]) commPct = parseFloat(match[1]);
+    }
+    if (document.getElementById('weeklyCommInput')) document.getElementById('weeklyCommInput').value = commPct > 0 ? commPct : '';
+    openModal('weeklyEditModal');
+};
+
+window.saveWeeklyCommission = function() {
+    const customerId = document.getElementById('editWeeklyCustId') ? document.getElementById('editWeeklyCustId').value : '';
+    const item = weeklyReceiptsData.find(w => w.customerId == customerId);
+    if (!item) return;
+
+    const commPct = parseFloat(document.getElementById('weeklyCommInput').value) || 0;
+
+    let mon = item.mondayNet || 0;
+    let tue = item.tuesdayNet || 0;
+    let wed = item.wednesdayNet || 0;
+    let thu = item.thursdayNet || 0;
+    let fri = item.fridayNet || 0;
+    let sat = item.saturdayNet || 0;
+    let sun = item.sundayNet || 0;
+
+    let weeklySum = mon + tue + wed + thu + fri + sat + sun;
+    let commVal = 0;
+    if (commPct > 0) {
+        commVal = Math.round(Math.abs(weeklySum) * (commPct / 100));
+    }
+
+    let netWeekly = weeklySum >= 0 ? (weeklySum - commVal) : (weeklySum + commVal);
+    item.weeklyTotalNet = netWeekly;
+    item.weeklyTotalStatus = netWeekly >= 0 ? 'YENE' : 'DENE';
+
+    const fmt = (n) => Math.abs(n).toLocaleString('en-IN');
+    const fmtDay = (n) => (n == null || n === 0) ? '-' : (fmt(n) + (n >= 0 ? ' yeṇe' : ' dene'));
+    const statusStr = netWeekly >= 0 ? 'yeṇe' : 'dene';
+    const sumStatusStr = weeklySum >= 0 ? 'yeṇe' : 'dene';
+
+    let sb = [];
+    sb.push("==================================");
+    sb.push("      *WEEKLY MARKET STATEMENT*");
+    sb.push(`      *${item.customerName.toUpperCase()}*`);
+    sb.push("==================================");
+    sb.push("*DAY*                   *NET TRADE*");
+    sb.push("----------------------------------");
+    sb.push(`Mon :-               ${fmtDay(mon)}`);
+    sb.push(`Tue :-               ${fmtDay(tue)}`);
+    sb.push(`Wed :-               ${fmtDay(wed)}`);
+    sb.push(`Thu :-               ${fmtDay(thu)}`);
+    sb.push(`Fri :-               ${fmtDay(fri)}`);
+    sb.push(`Sat :-               ${fmtDay(sat)}`);
+    sb.push(`Sun :-               ${fmtDay(sun)}`);
+    sb.push("----------------------------------");
+
+    if (commPct > 0) {
+        sb.push(`*TOTAL :-*           ${fmt(weeklySum)} ${sumStatusStr}`);
+        sb.push(`*COM (${commPct}%) :-*       ${fmt(commVal)}`);
+        sb.push("----------------------------------");
+    }
+
+    sb.push(`*WEEKLY TOTAL :-*    ${fmt(netWeekly)} ${statusStr}`);
+    sb.push("==================================");
+    sb.push(`TOTAL BALANCE DUE ${fmt(netWeekly)} ${statusStr}`);
+
+    item.formattedWeeklyMessage = sb.join('\n');
+
+    renderWeeklyTable(weeklyReceiptsData);
+    closeModal('weeklyEditModal');
+};
 
 window.editCustomer = function(id) {
     const customer = customersData.find(c => c.id == id);
@@ -568,6 +784,9 @@ window.processTradeAction = async function(actionType) {
 
         if (res.ok) {
             await loadCustomers('', getSelectedMarket());
+            if (currentSegment === 'weekly') {
+                await loadWeeklyReceipts();
+            }
             await loadDashboardMetrics();
             
             if (actionType === 'save') {
@@ -774,6 +993,7 @@ async function triggerWhatsApp(customerId, autoShare = false) {
         currentWaLink = waLink;
 
         // Render HD Receipt Canvas Photo
+        if (document.getElementById('btnEditReceipt')) document.getElementById('btnEditReceipt').style.display = 'flex';
         renderReceiptImageCanvas(data.formattedMessage, data.customerName);
 
         openModal('whatsappModal');
@@ -885,6 +1105,8 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
     let cityTitle = 'PUNE';
     let totalBalanceStr = '';
 
+    const isWeekly = formattedMessage ? (formattedMessage.toUpperCase().includes('WEEKLY') || formattedMessage.toUpperCase().includes('NET TRADE')) : false;
+
     const parsedRows = [];
     let pendingMissPrefix = false;
 
@@ -893,6 +1115,14 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
         let cleanText = line.replace(/\*/g, '').trim();
 
         if (!cleanText) return;
+
+        if (isWeekly && (cleanText.toUpperCase().includes('EXCL') || cleanText.toUpperCase().includes('MAGIL YENE / MAGIL DENE'))) {
+            return;
+        }
+
+        if (isWeekly && cleanText.toUpperCase().includes('DAY') && cleanText.toUpperCase().includes('NET TRADE')) {
+            return;
+        }
 
         // 1. Check Date Badge
         if (cleanText.toLowerCase().includes('date:')) {
@@ -937,13 +1167,14 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
 
         const parts = cleanText.split(/:-|:/);
         let label = parts[0] ? parts[0].trim() : '';
+        label = label.replace(/\s*\((Som|Mangal|Budh|Guru|Shukra|Shani|Ravi)\)/gi, '').trim();
 
         if (pendingMissPrefix) {
             label = 'MISS ' + label;
             pendingMissPrefix = false;
         }
 
-        let isHighlight = label.toUpperCase().startsWith('TOTAL') || label.toUpperCase().startsWith('REMAINING') || label.toUpperCase().startsWith('NET');
+        let isHighlight = label.toUpperCase().startsWith('TOTAL') || label.toUpperCase().startsWith('REMAINING') || label.toUpperCase().startsWith('NET') || label.toUpperCase().startsWith('WEEKLY TOTAL');
 
         let sellVal = '';
         let payVal = '';
@@ -953,22 +1184,27 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
             payVal = parts[2].trim();
         } else if (parts.length === 2) {
             const valStr = parts[1].trim();
-            const numbers = valStr.match(/[\d,.]+(\s*(yeṇe|dene|yene|dene))?/gi) || [];
-
-            if (numbers.length >= 2) {
-                sellVal = numbers[0].trim();
-                payVal = numbers[1].trim();
-            } else if (numbers.length === 1) {
-                if (label.toUpperCase().includes('PAYMENT')) {
-                    payVal = numbers[0].trim();
-                } else {
-                    sellVal = numbers[0].trim();
-                }
+            if (isWeekly) {
+                payVal = valStr;
+                sellVal = '';
             } else {
-                if (label.toUpperCase().includes('PAYMENT')) {
-                    payVal = valStr;
+                const numbers = valStr.match(/[\d,.]+(\s*(yeṇe|dene|yene|dene))?/gi) || [];
+
+                if (numbers.length >= 2) {
+                    sellVal = numbers[0].trim();
+                    payVal = numbers[1].trim();
+                } else if (numbers.length === 1) {
+                    if (label.toUpperCase().includes('PAYMENT')) {
+                        payVal = numbers[0].trim();
+                    } else {
+                        sellVal = numbers[0].trim();
+                    }
                 } else {
-                    sellVal = valStr;
+                    if (label.toUpperCase().includes('PAYMENT')) {
+                        payVal = valStr;
+                    } else {
+                        sellVal = valStr;
+                    }
                 }
             }
         } else {
@@ -1074,22 +1310,30 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
     ctx.fillText(dateText, canvasWidth / 2, dateY + (dateHeight / 2) + (1 * scale));
     ctx.restore();
 
-    // 4. Column Headers (PARTICULARS   SELL (₹)   PAYMENT (₹))
+    // 4. Column Headers
     let currentY = headerHeight + (25 * scale);
     const labelX = paddingX + (8 * scale);
     const sellColX = 370 * scale; // Right-aligned SELL column
-    const payColX = 510 * scale;  // Right-aligned PAYMENT column
+    const payColX = 510 * scale;  // Right-aligned PAYMENT / NET TRADE column
 
     ctx.font = `900 ${16 * scale}px ${fontStack}`;
     ctx.fillStyle = '#334155';
     ctx.textBaseline = 'middle';
 
-    ctx.textAlign = 'left';
-    ctx.fillText('PARTICULARS', labelX, currentY);
+    if (isWeekly) {
+        ctx.textAlign = 'left';
+        ctx.fillText('DAY', labelX, currentY);
 
-    ctx.textAlign = 'right';
-    ctx.fillText('SELL (₹)', sellColX, currentY);
-    ctx.fillText('PAYMENT (₹)', payColX, currentY);
+        ctx.textAlign = 'right';
+        ctx.fillText('NET TRADE', payColX, currentY);
+    } else {
+        ctx.textAlign = 'left';
+        ctx.fillText('PARTICULARS', labelX, currentY);
+
+        ctx.textAlign = 'right';
+        ctx.fillText('SELL (₹)', sellColX, currentY);
+        ctx.fillText('PAYMENT (₹)', payColX, currentY);
+    }
 
     currentY += 20 * scale;
 
@@ -1152,10 +1396,27 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
             ctx.textAlign = 'left';
             ctx.fillText(row.label, labelX, currentY);
 
-            ctx.fillStyle = isHighlight ? '#0284c7' : '#0f172a';
             ctx.textAlign = 'right';
-            if (row.sellVal) ctx.fillText(row.sellVal, sellColX, currentY);
-            if (row.payVal) ctx.fillText(row.payVal, payColX, currentY);
+            if (row.sellVal) {
+                if (isWeekly && row.sellVal.toLowerCase().includes('dene')) {
+                    ctx.fillStyle = '#dc2626';
+                } else if (isWeekly && (row.sellVal.toLowerCase().includes('yene') || row.sellVal.toLowerCase().includes('yeṇe'))) {
+                    ctx.fillStyle = '#0f172a';
+                } else {
+                    ctx.fillStyle = isHighlight ? '#0284c7' : '#0f172a';
+                }
+                ctx.fillText(row.sellVal, sellColX, currentY);
+            }
+            if (row.payVal) {
+                if (isWeekly && row.payVal.toLowerCase().includes('dene')) {
+                    ctx.fillStyle = '#dc2626';
+                } else if (isWeekly && (row.payVal.toLowerCase().includes('yene') || row.payVal.toLowerCase().includes('yeṇe'))) {
+                    ctx.fillStyle = '#0f172a';
+                } else {
+                    ctx.fillStyle = isHighlight ? '#0284c7' : '#0f172a';
+                }
+                ctx.fillText(row.payVal, payColX, currentY);
+            }
         }
 
         currentY += rowHeight;
@@ -1214,9 +1475,17 @@ function toggleEditReceiptPanel() {
     const editText = document.getElementById('waReceiptEditText');
     if (!editContainer) return;
 
+    const isWeekly = currentFormattedMessage ? (currentFormattedMessage.toUpperCase().includes('WEEKLY') || currentFormattedMessage.toUpperCase().includes('NET TRADE')) : false;
+
     const isHidden = editContainer.style.display === 'none' || !editContainer.style.display;
     if (isHidden) {
         editContainer.style.display = 'block';
+        if (document.getElementById('dailyEditFields')) {
+            document.getElementById('dailyEditFields').style.display = isWeekly ? 'none' : 'grid';
+        }
+        if (document.getElementById('weeklyEditFields')) {
+            document.getElementById('weeklyEditFields').style.display = isWeekly ? 'block' : 'none';
+        }
         if (editText) {
             editText.value = currentFormattedMessage || '';
             editText.focus();
@@ -1228,51 +1497,140 @@ function toggleEditReceiptPanel() {
     }
 }
 
+function extractRowNumbers(cleanLine) {
+    let afterLabel = cleanLine;
+    const colonIdx = cleanLine.indexOf(':');
+    if (colonIdx !== -1) {
+        afterLabel = cleanLine.substring(colonIdx + 1);
+    }
+    const nums = afterLabel.match(/[\d,]+(?:\.\d+)?/g) || [];
+    const sell = nums.length >= 1 ? (parseFloat(nums[0].replace(/,/g, '')) || 0) : 0;
+    const pay = nums.length >= 2 ? (parseFloat(nums[1].replace(/,/g, '')) || 0) : 0;
+    return { sell, pay };
+}
+
 function updateCalculatedValuesInText(text) {
     if (!text) return text;
+
+    const isWeekly = text.toUpperCase().includes('WEEKLY') || text.toUpperCase().includes('NET TRADE');
     const lines = text.split('\n');
+
+    if (isWeekly) {
+        let weeklySum = 0;
+        let commPct = 0;
+        let inputCommEl = document.getElementById('editWeeklyComm');
+        if (inputCommEl && inputCommEl.value !== '') {
+            commPct = parseFloat(inputCommEl.value) || 0;
+        }
+
+        lines.forEach(l => {
+            const clean = l.replace(/\*/g, '').trim();
+            const upper = clean.toUpperCase();
+            if (upper.startsWith('MON :-') || upper.startsWith('TUE :-') || upper.startsWith('WED :-') ||
+                upper.startsWith('THU :-') || upper.startsWith('FRI :-') || upper.startsWith('SAT :-') || upper.startsWith('SUN :-') ||
+                upper.startsWith('MON:') || upper.startsWith('TUE:') || upper.startsWith('WED:') ||
+                upper.startsWith('THU:') || upper.startsWith('FRI:') || upper.startsWith('SAT:') || upper.startsWith('SUN:')) {
+                const { sell } = extractRowNumbers(clean);
+                if (upper.includes('DENE')) {
+                    weeklySum -= sell;
+                } else if (sell > 0) {
+                    weeklySum += sell;
+                }
+            } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
+                if (commPct === 0) {
+                    const commMatch = clean.match(/COM\s*\((\d+(\.\d+)?)%\)/i);
+                    if (commMatch && commMatch[1]) commPct = parseFloat(commMatch[1]);
+                }
+            }
+        });
+
+        let commVal = 0;
+        if (commPct > 0) {
+            commVal = Math.round(Math.abs(weeklySum) * (commPct / 100));
+        }
+
+        let netWeekly = weeklySum >= 0 ? (weeklySum - commVal) : (weeklySum + commVal);
+        let statusStr = netWeekly >= 0 ? 'yeṇe' : 'dene';
+        let absNetStr = Math.abs(netWeekly).toLocaleString('en-IN');
+        let absSumStr = Math.abs(weeklySum).toLocaleString('en-IN');
+        let sumStatusStr = weeklySum >= 0 ? 'yeṇe' : 'dene';
+
+        let newLines = [];
+        let hasTotalLine = false;
+
+        lines.forEach(line => {
+            const clean = line.replace(/\*/g, '').trim();
+            const upper = clean.toUpperCase();
+
+            if (upper.startsWith('TOTAL :-') || upper.startsWith('TOTAL:')) {
+                if (commPct > 0) {
+                    hasTotalLine = true;
+                    newLines.push(`*TOTAL :-*           ${absSumStr} ${sumStatusStr}`);
+                }
+            } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
+                if (commPct > 0) {
+                    newLines.push(`*COM (${commPct}%) :-*       ${commVal.toLocaleString('en-IN')}`);
+                }
+            } else if (upper.startsWith('WEEKLY TOTAL :-') || upper.startsWith('WEEKLY TOTAL:')) {
+                if (commPct > 0 && !hasTotalLine) {
+                    newLines.push(`*TOTAL :-*           ${absSumStr} ${sumStatusStr}`);
+                    newLines.push(`*COM (${commPct}%) :-*       ${commVal.toLocaleString('en-IN')}`);
+                }
+                newLines.push(`*WEEKLY TOTAL :-*    ${absNetStr} ${statusStr}`);
+            } else if (upper.includes('TOTAL BALANCE DUE')) {
+                newLines.push(`TOTAL BALANCE DUE ${absNetStr} ${statusStr}`);
+            } else {
+                newLines.push(line);
+            }
+        });
+
+        return newLines.join('\n');
+    }
 
     let sellPo = null, payPo = null;
     let sellPc = null, payPc = null;
     let commPct = 10;
     let commVal = null;
     let pagarVal = 0;
-    let magilVal = 0;
+    let magilYeneVal = 0;
+    let magilDeneVal = 0;
+    let missPaymentVal = 0;
     let hasCommLine = false;
 
     lines.forEach(l => {
         const clean = l.replace(/\*/g, '').trim();
         const upper = clean.toUpperCase();
         if (upper.startsWith('PO :-') || upper.startsWith('PO:')) {
-            const parts = clean.split(/:-|:/);
-            if (parts.length >= 3) {
-                sellPo = parseFloat(parts[1].replace(/,/g, '')) || 0;
-                payPo = parseFloat(parts[2].replace(/,/g, '')) || 0;
-            } else if (parts.length === 2) {
-                sellPo = parseFloat(parts[1].replace(/,/g, '')) || 0;
-            }
+            const { sell, pay } = extractRowNumbers(clean);
+            sellPo = sell;
+            payPo = pay;
         } else if (upper.startsWith('PC :-') || upper.startsWith('PC:')) {
-            const parts = clean.split(/:-|:/);
-            if (parts.length >= 3) {
-                sellPc = parseFloat(parts[1].replace(/,/g, '')) || 0;
-                payPc = parseFloat(parts[2].replace(/,/g, '')) || 0;
-            } else if (parts.length === 2) {
-                sellPc = parseFloat(parts[1].replace(/,/g, '')) || 0;
-            }
+            const { sell, pay } = extractRowNumbers(clean);
+            sellPc = sell;
+            payPc = pay;
         } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
             hasCommLine = true;
             const commMatch = clean.match(/COM\s*\((\d+(\.\d+)?)%\)/i);
             if (commMatch && commMatch[1]) commPct = parseFloat(commMatch[1]);
+        } else if (upper.includes('MAGIL YENE')) {
+            const { sell } = extractRowNumbers(clean);
+            magilYeneVal = sell;
+        } else if (upper.includes('MAGIL DENE')) {
+            const { sell } = extractRowNumbers(clean);
+            magilDeneVal = sell;
         } else if (upper.includes('MAGIL')) {
-            const parts = clean.split(/:-|:/);
-            if (parts.length >= 2) {
-                magilVal = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
+            const { sell } = extractRowNumbers(clean);
+            if (upper.includes('DENE')) {
+                magilDeneVal = sell;
+            } else {
+                magilYeneVal = sell;
             }
         } else if (upper.startsWith('PAGAR')) {
-            const parts = clean.split(/:-|:/);
-            if (parts.length >= 2) {
-                pagarVal = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
-            }
+            const { sell } = extractRowNumbers(clean);
+            pagarVal = sell;
+        } else if (upper.includes('MISS')) {
+            const { sell, pay } = extractRowNumbers(clean);
+            missPaymentVal = pay || sell;
         }
     });
 
@@ -1289,8 +1647,8 @@ function updateCalculatedValuesInText(text) {
     }
 
     const totalAfterComm = totalSell - commVal;
-    const remaining = totalAfterComm - totalPay - pagarVal;
-    const netBal = remaining + magilVal;
+    const remaining = totalAfterComm - totalPay - pagarVal - missPaymentVal;
+    const netBal = remaining + magilYeneVal - magilDeneVal;
     const balSuffix = netBal >= 0 ? 'yeṇe' : 'dene';
     const absBalStr = Math.abs(netBal).toLocaleString('en-IN');
 
@@ -1325,74 +1683,128 @@ function populateQuickFieldsFromText(text) {
 
     let poSell = null, poPay = null;
     let pcSell = null, pcPay = null;
-    let magil = null, pagar = null;
+    let magilYene = null, magilDene = null;
+    let missPayment = null;
+    let weeklyComm = 0;
 
     lines.forEach(line => {
         const clean = line.replace(/\*/g, '').trim();
         const upper = clean.toUpperCase();
 
         if (upper.startsWith('PO :-') || upper.startsWith('PO:')) {
-            const parts = clean.split(/:-|:/);
-            if (parts.length >= 3) {
-                poSell = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
-                poPay = parseFloat(parts[2].replace(/[^0-9.]/g, ''));
-            } else if (parts.length === 2) {
-                poSell = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
-            }
+            const { sell, pay } = extractRowNumbers(clean);
+            poSell = sell;
+            poPay = pay;
         } else if (upper.startsWith('PC :-') || upper.startsWith('PC:')) {
-            const parts = clean.split(/:-|:/);
-            if (parts.length >= 3) {
-                pcSell = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
-                pcPay = parseFloat(parts[2].replace(/[^0-9.]/g, ''));
-            } else if (parts.length === 2) {
-                pcSell = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
-            }
+            const { sell, pay } = extractRowNumbers(clean);
+            pcSell = sell;
+            pcPay = pay;
+        } else if (upper.includes('MAGIL YENE')) {
+            const { sell } = extractRowNumbers(clean);
+            magilYene = sell;
+        } else if (upper.includes('MAGIL DENE')) {
+            const { sell } = extractRowNumbers(clean);
+            magilDene = sell;
         } else if (upper.includes('MAGIL')) {
-            const parts = clean.split(/:-|:/);
-            if (parts.length >= 2) {
-                magil = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
+            const { sell } = extractRowNumbers(clean);
+            if (upper.includes('DENE')) {
+                magilDene = sell;
+            } else {
+                magilYene = sell;
             }
-        } else if (upper.startsWith('PAGAR')) {
-            const parts = clean.split(/:-|:/);
-            if (parts.length >= 2) {
-                pagar = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
-            }
+        } else if (upper.includes('MISS')) {
+            const { sell, pay } = extractRowNumbers(clean);
+            missPayment = pay || sell;
+        } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
+            const match = clean.match(/COM\s*\((\d+(\.\d+)?)%\)/i);
+            if (match && match[1]) weeklyComm = parseFloat(match[1]);
         }
     });
 
-    if (document.getElementById('editPoSell') && poSell !== null && !isNaN(poSell)) document.getElementById('editPoSell').value = poSell;
-    if (document.getElementById('editPoPay') && poPay !== null && !isNaN(poPay)) document.getElementById('editPoPay').value = poPay;
-    if (document.getElementById('editPcSell') && pcSell !== null && !isNaN(pcSell)) document.getElementById('editPcSell').value = pcSell;
-    if (document.getElementById('editPcPay') && pcPay !== null && !isNaN(pcPay)) document.getElementById('editPcPay').value = pcPay;
-    if (document.getElementById('editMagil') && magil !== null && !isNaN(magil)) document.getElementById('editMagil').value = magil;
-    if (document.getElementById('editPagar') && pagar !== null && !isNaN(pagar)) document.getElementById('editPagar').value = pagar;
+    if (document.getElementById('editPoSell')) document.getElementById('editPoSell').value = (poSell !== null && !isNaN(poSell)) ? poSell : 0;
+    if (document.getElementById('editPoPay')) document.getElementById('editPoPay').value = (poPay !== null && !isNaN(poPay)) ? poPay : 0;
+    if (document.getElementById('editPcSell')) document.getElementById('editPcSell').value = (pcSell !== null && !isNaN(pcSell)) ? pcSell : 0;
+    if (document.getElementById('editPcPay')) document.getElementById('editPcPay').value = (pcPay !== null && !isNaN(pcPay)) ? pcPay : 0;
+    if (document.getElementById('editMagilYene')) document.getElementById('editMagilYene').value = (magilYene !== null && !isNaN(magilYene)) ? magilYene : 0;
+    if (document.getElementById('editMagilDene')) document.getElementById('editMagilDene').value = (magilDene !== null && !isNaN(magilDene)) ? magilDene : 0;
+    if (document.getElementById('editMissPayment')) document.getElementById('editMissPayment').value = (missPayment !== null && !isNaN(missPayment)) ? missPayment : 0;
+    if (document.getElementById('editWeeklyComm')) document.getElementById('editWeeklyComm').value = (weeklyComm > 0) ? weeklyComm : '';
 }
 
+window.onWeeklyQuickFieldEdited = function() {
+    let text = document.getElementById('waReceiptEditText').value || currentFormattedMessage || '';
+    let newText = updateCalculatedValuesInText(text);
+
+    currentFormattedMessage = newText;
+    const editText = document.getElementById('waReceiptEditText');
+    if (editText) editText.value = newText;
+
+    renderReceiptImageCanvas(newText, currentCustomerName);
+};
+
 function onQuickFieldEdited() {
-    const sellPo = parseFloat(document.getElementById('editPoSell').value) || 0;
-    const payPo = parseFloat(document.getElementById('editPoPay').value) || 0;
-    const sellPc = parseFloat(document.getElementById('editPcSell').value) || 0;
-    const payPc = parseFloat(document.getElementById('editPcPay').value) || 0;
-    const magil = parseFloat(document.getElementById('editMagil').value) || 0;
-    const pagar = parseFloat(document.getElementById('editPagar').value) || 0;
+    const sellPo = parseFloat(document.getElementById('editPoSell') ? document.getElementById('editPoSell').value : 0) || 0;
+    const payPo = parseFloat(document.getElementById('editPoPay') ? document.getElementById('editPoPay').value : 0) || 0;
+    const sellPc = parseFloat(document.getElementById('editPcSell') ? document.getElementById('editPcSell').value : 0) || 0;
+    const payPc = parseFloat(document.getElementById('editPcPay') ? document.getElementById('editPcPay').value : 0) || 0;
+    const magilYene = parseFloat(document.getElementById('editMagilYene') ? document.getElementById('editMagilYene').value : 0) || 0;
+    const magilDene = parseFloat(document.getElementById('editMagilDene') ? document.getElementById('editMagilDene').value : 0) || 0;
+    const missPayment = parseFloat(document.getElementById('editMissPayment') ? document.getElementById('editMissPayment').value : 0) || 0;
 
     let text = document.getElementById('waReceiptEditText').value || currentFormattedMessage || '';
-    const lines = text.split('\n');
+    let lines = text.split('\n');
 
-    const updatedLines = lines.map(line => {
+    let hasMagilYene = false, hasMagilDene = false, hasMiss = false;
+
+    let updatedLines = lines.map(line => {
         const clean = line.replace(/\*/g, '').trim();
         const upper = clean.toUpperCase();
+
         if (upper.startsWith('PO :-') || upper.startsWith('PO:')) {
             return line.replace(/:-.*/, `:- ${sellPo.toLocaleString('en-IN')} : ${payPo.toLocaleString('en-IN')}`);
         } else if (upper.startsWith('PC :-') || upper.startsWith('PC:')) {
             return line.replace(/:-.*/, `:- ${sellPc.toLocaleString('en-IN')} : ${payPc.toLocaleString('en-IN')}`);
+        } else if (upper.includes('MAGIL YENE')) {
+            hasMagilYene = true;
+            if (magilYene > 0) return `🔴 *MAGIL YENE:* *${magilYene.toLocaleString('en-IN')}*`;
+            return null;
+        } else if (upper.includes('MAGIL DENE')) {
+            hasMagilDene = true;
+            if (magilDene > 0) return `🔴 *MAGIL DENE:* *${magilDene.toLocaleString('en-IN')}*`;
+            return null;
         } else if (upper.includes('MAGIL')) {
-            return line.replace(/:-.*/, `:- ${magil.toLocaleString('en-IN')}`);
-        } else if (upper.startsWith('PAGAR')) {
-            return line.replace(/:-.*/, `:- ${pagar.toLocaleString('en-IN')}`);
+            if (upper.includes('DENE')) {
+                hasMagilDene = true;
+                if (magilDene > 0) return `🔴 *MAGIL DENE:* *${magilDene.toLocaleString('en-IN')}*`;
+                return null;
+            } else {
+                hasMagilYene = true;
+                if (magilYene > 0) return `🔴 *MAGIL YENE:* *${magilYene.toLocaleString('en-IN')}*`;
+                return null;
+            }
+        } else if (upper.includes('MISS')) {
+            hasMiss = true;
+            if (missPayment > 0) return `*MISS PAYMENT :-* ${missPayment.toLocaleString('en-IN')}`;
+            return null;
         }
         return line;
-    });
+    }).filter(l => l !== null && l !== undefined);
+
+    let insertIdx = updatedLines.findIndex(l => l.replace(/\*/g, '').toUpperCase().includes('TOTAL BALANCE DUE'));
+    if (insertIdx === -1) insertIdx = updatedLines.length;
+
+    if (!hasMiss && missPayment > 0) {
+        updatedLines.splice(insertIdx, 0, `*MISS PAYMENT :-* ${missPayment.toLocaleString('en-IN')}`);
+        insertIdx++;
+    }
+    if (!hasMagilYene && magilYene > 0) {
+        updatedLines.splice(insertIdx, 0, `🔴 *MAGIL YENE:* *${magilYene.toLocaleString('en-IN')}*`);
+        insertIdx++;
+    }
+    if (!hasMagilDene && magilDene > 0) {
+        updatedLines.splice(insertIdx, 0, `🔴 *MAGIL DENE:* *${magilDene.toLocaleString('en-IN')}*`);
+        insertIdx++;
+    }
 
     let newText = updatedLines.join('\n');
     newText = updateCalculatedValuesInText(newText);
