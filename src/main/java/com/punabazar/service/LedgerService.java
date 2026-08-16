@@ -113,12 +113,12 @@ public class LedgerService {
             todayNetSum = todayTotalSell.subtract(todayTotalCommission).subtract(todayTotalPayment);
         }
 
+        String profitLossStatus = todayNetSum.compareTo(BigDecimal.ZERO) >= 0 ? "PROFIT" : "LOSS";
+        BigDecimal todayProfitLoss = todayNetSum.abs();
+
         BigDecimal totalCustomerBalance = (customers != null) ? customers.stream()
                 .map(c -> c.getPreviousBalance() != null ? c.getPreviousBalance() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add) : BigDecimal.ZERO;
-
-        String profitLossStatus = totalCustomerBalance.compareTo(BigDecimal.ZERO) >= 0 ? "PROFIT" : "LOSS";
-        BigDecimal todayProfitLoss = totalCustomerBalance.abs();
 
         List<String> markets = customerRepository.findDistinctCities();
 
