@@ -122,28 +122,52 @@ public class WhatsAppService {
         BigDecimal yeneVal = BigDecimal.ZERO;
         BigDecimal deneVal = BigDecimal.ZERO;
 
-        if (yeneParam != null) {
-            yeneVal = yeneParam;
-        }
-        if (deneParam != null) {
-            deneVal = deneParam;
-        }
+        boolean hasExplicitOpening = (yeneParam != null && yeneParam.compareTo(BigDecimal.ZERO) > 0) 
+                                  || (deneParam != null && deneParam.compareTo(BigDecimal.ZERO) > 0);
 
-        if (yeneParam == null && deneParam == null) {
-            if (latestTx != null && latestTx.getMagilBaki() != null && latestTx.getMagilBaki().compareTo(BigDecimal.ZERO) != 0) {
-                if (latestTx.getMagilBaki().compareTo(BigDecimal.ZERO) > 0) {
-                    yeneVal = latestTx.getMagilBaki();
-                } else {
-                    deneVal = latestTx.getMagilBaki().abs();
-                }
-            } else if (customer.getYene() != null && customer.getYene().compareTo(BigDecimal.ZERO) > 0) {
+        if (hasExplicitOpening) {
+            yeneVal = yeneParam != null ? yeneParam : BigDecimal.ZERO;
+            deneVal = deneParam != null ? deneParam : BigDecimal.ZERO;
+        } else if (isFormTrade && latestTx == null) {
+            if (customer.getYene() != null && customer.getYene().compareTo(BigDecimal.ZERO) > 0) {
                 yeneVal = customer.getYene();
             } else if (customer.getDene() != null && customer.getDene().compareTo(BigDecimal.ZERO) > 0) {
                 deneVal = customer.getDene();
-            } else if (customer.getPreviousBalance() != null) {
+            } else if (customer.getMagilBaki() != null && customer.getMagilBaki().compareTo(BigDecimal.ZERO) > 0) {
+                if ("DENE".equalsIgnoreCase(customer.getBalanceType())) {
+                    deneVal = customer.getMagilBaki();
+                } else {
+                    yeneVal = customer.getMagilBaki();
+                }
+            } else if (customer.getPreviousBalance() != null && customer.getPreviousBalance().compareTo(BigDecimal.ZERO) != 0) {
                 if (customer.getPreviousBalance().compareTo(BigDecimal.ZERO) > 0) {
                     yeneVal = customer.getPreviousBalance();
-                } else if (customer.getPreviousBalance().compareTo(BigDecimal.ZERO) < 0) {
+                } else {
+                    deneVal = customer.getPreviousBalance().abs();
+                }
+            }
+        } else if (latestTx != null) {
+            BigDecimal txMagil = latestTx.getMagilBaki() != null ? latestTx.getMagilBaki() : BigDecimal.ZERO;
+            if (txMagil.compareTo(BigDecimal.ZERO) > 0) {
+                yeneVal = txMagil;
+            } else if (txMagil.compareTo(BigDecimal.ZERO) < 0) {
+                deneVal = txMagil.abs();
+            }
+        } else {
+            if (customer.getYene() != null && customer.getYene().compareTo(BigDecimal.ZERO) > 0) {
+                yeneVal = customer.getYene();
+            } else if (customer.getDene() != null && customer.getDene().compareTo(BigDecimal.ZERO) > 0) {
+                deneVal = customer.getDene();
+            } else if (customer.getMagilBaki() != null && customer.getMagilBaki().compareTo(BigDecimal.ZERO) > 0) {
+                if ("DENE".equalsIgnoreCase(customer.getBalanceType())) {
+                    deneVal = customer.getMagilBaki();
+                } else {
+                    yeneVal = customer.getMagilBaki();
+                }
+            } else if (customer.getPreviousBalance() != null && customer.getPreviousBalance().compareTo(BigDecimal.ZERO) != 0) {
+                if (customer.getPreviousBalance().compareTo(BigDecimal.ZERO) > 0) {
+                    yeneVal = customer.getPreviousBalance();
+                } else {
                     deneVal = customer.getPreviousBalance().abs();
                 }
             }
@@ -229,26 +253,27 @@ public class WhatsAppService {
                 sb.append("*TOTAL:-            ").append(fmtNum(afterFarak)).append("*\n");
             }
 
-            boolean isShareEnabled = (shareRate != null && shareRate.compareTo(new BigDecimal("100")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
-            boolean is30ProfitOnly = Boolean.TRUE.equals(customer.getShare30ProfitOnly()) || (shareRate != null && shareRate.compareTo(new BigDecimal("30")) == 0);
+            boolean is30ProfitOnly = customer != null && Boolean.TRUE.equals(customer.getShare30ProfitOnly());
+            boolean isShareEnabled = is30ProfitOnly || (shareRate != null && shareRate.compareTo(new BigDecimal("100")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
+            BigDecimal effectiveShareRate = is30ProfitOnly ? new BigDecimal("30.00") : (shareRate != null ? shareRate : new BigDecimal("100.00"));
             BigDecimal shareAmount = BigDecimal.ZERO;
             BigDecimal todayNet = afterFarak;
 
             if (isShareEnabled) {
                 if (is30ProfitOnly) {
                     if (afterFarak.compareTo(BigDecimal.ZERO) > 0) {
-                        shareAmount = afterFarak.multiply(shareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                        shareAmount = afterFarak.multiply(effectiveShareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
                     } else {
                         shareAmount = BigDecimal.ZERO;
                     }
                 } else {
-                    shareAmount = afterFarak.multiply(shareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                    shareAmount = afterFarak.multiply(effectiveShareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
                 }
 
                 todayNet = afterFarak.subtract(shareAmount);
                 if (shareAmount.compareTo(BigDecimal.ZERO) != 0) {
                     sb.append("---------------------------------\n");
-                    sb.append("*(").append(shareRate.stripTrailingZeros().toPlainString()).append("%):-  ").append(fmtNum(shareAmount)).append("*\n");
+                    sb.append("*(").append(effectiveShareRate.stripTrailingZeros().toPlainString()).append("%):-           ").append(fmtNum(shareAmount)).append("*\n");
                     sb.append("---------------------------------\n");
                 }
             }
@@ -318,26 +343,26 @@ public class WhatsAppService {
             } else {
                 sb.append("                          *").append(fmtNum(afterPayVal)).append("*\n");
             }
-
-            boolean isShareEnabled = (shareRate != null && shareRate.compareTo(new BigDecimal("100")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
-            boolean is30ProfitOnly = Boolean.TRUE.equals(customer.getShare30ProfitOnly()) || (shareRate != null && shareRate.compareTo(new BigDecimal("30")) == 0);
+            boolean is30ProfitOnly = customer != null && Boolean.TRUE.equals(customer.getShare30ProfitOnly());
+            boolean isShareEnabled = is30ProfitOnly || (shareRate != null && shareRate.compareTo(new BigDecimal("100")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
+            BigDecimal effectiveShareRate = is30ProfitOnly ? new BigDecimal("30.00") : (shareRate != null ? shareRate : new BigDecimal("100.00"));
             BigDecimal shareAmount = BigDecimal.ZERO;
             BigDecimal todayNet = runningNet5;
 
             if (isShareEnabled) {
                 if (is30ProfitOnly) {
                     if (runningNet5.compareTo(BigDecimal.ZERO) > 0) {
-                        shareAmount = runningNet5.multiply(shareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                        shareAmount = runningNet5.multiply(effectiveShareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
                     } else {
                         shareAmount = BigDecimal.ZERO;
                     }
                 } else {
-                    shareAmount = runningNet5.multiply(shareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                    shareAmount = runningNet5.multiply(effectiveShareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
                 }
 
                 todayNet = runningNet5.subtract(shareAmount);
                 if (shareAmount.compareTo(BigDecimal.ZERO) != 0) {
-                    sb.append("            *(").append(shareRate.stripTrailingZeros().toPlainString()).append("%):-  ").append(fmtNum(shareAmount)).append("*\n");
+                    sb.append("            *(").append(effectiveShareRate.stripTrailingZeros().toPlainString()).append("%):-           ").append(fmtNum(shareAmount)).append("*\n");
                     sb.append("---------------------------------\n");
                 }
             }

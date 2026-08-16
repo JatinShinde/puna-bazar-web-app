@@ -11,6 +11,9 @@ import java.util.List;
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     List<Transaction> findByCustomerIdOrderByTransactionDateDesc(Long customerId);
     List<Transaction> findByTransactionDate(LocalDate date);
+    boolean existsByCustomerIdAndTransactionDate(Long customerId, LocalDate transactionDate);
+    List<Transaction> findByCustomerIdAndTransactionDate(Long customerId, LocalDate transactionDate);
+    java.util.Optional<Transaction> findTopByCustomerIdAndTransactionDateOrderByCreatedAtDesc(Long customerId, LocalDate transactionDate);
 
     @Query("SELECT SUM(t.totalSell) FROM Transaction t WHERE t.transactionDate = :date")
     Double getTodayTotalSell(@Param("date") LocalDate date);

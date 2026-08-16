@@ -10,6 +10,7 @@ function isPagarEnabledForCustomer(customer) {
 
 function isShareEnabledForCustomer(customer) {
     if (!customer) return false;
+    if (customer.share30ProfitOnly === true || customer.share30ProfitOnly === 'true') return true;
     return customer.shareRate != null && customer.shareRate > 0 && customer.shareRate < 100.0;
 }
 
@@ -18,7 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const localYyyy = localDate.getFullYear();
     const localMm = String(localDate.getMonth() + 1).padStart(2, '0');
     const localDd = String(localDate.getDate()).padStart(2, '0');
-    if (document.getElementById('txDate')) document.getElementById('txDate').value = `${localYyyy}-${localMm}-${localDd}`;
+    if (document.getElementById('txDate')) {
+        document.getElementById('txDate').value = `${localYyyy}-${localMm}-${localDd}`;
+        document.getElementById('txDate').addEventListener('change', () => checkIfMarketAlreadyUploaded());
+        document.getElementById('txDate').addEventListener('input', () => checkIfMarketAlreadyUploaded());
+    }
 
     // Initial Loaders
     checkAuth();
@@ -97,7 +102,35 @@ document.addEventListener('DOMContentLoaded', () => {
             renderCustomerMarketInputs('PO,PC');
         }
         calculateMathPreview();
+        checkIfMarketAlreadyUploaded();
     });
+
+window.checkIfMarketAlreadyUploaded = async function() {
+    const custId = document.getElementById('selectCustomer') ? document.getElementById('selectCustomer').value : '';
+    const dateVal = document.getElementById('txDate') ? document.getElementById('txDate').value : '';
+    const noticeEl = document.getElementById('alreadyUploadedNotice');
+
+    if (!custId || !dateVal) {
+        if (noticeEl) noticeEl.style.display = 'none';
+        return false;
+    }
+
+    try {
+        const res = await fetch(`/api/transactions/check-exists?customerId=${custId}&date=${dateVal}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.exists) {
+                if (noticeEl) noticeEl.style.display = 'block';
+                return true;
+            }
+        }
+    } catch (err) {
+        console.error('Error checking transaction existence:', err);
+    }
+
+    if (noticeEl) noticeEl.style.display = 'none';
+    return false;
+};
 
 function updateInputFieldsVisibility(receiptStyle) {
     const commGroup = document.getElementById('commGroup');
@@ -259,6 +292,7 @@ async function loadDashboardMetrics() {
     try {
         const res = await fetch('/api/dashboard/metrics');
         const data = await res.json();
+        latestDashboardData = data;
 
         if (document.getElementById('kpiTotalSell')) document.getElementById('kpiTotalSell').textContent = formatCurrency(data.todayTotalSell);
         if (document.getElementById('kpiPoSell')) document.getElementById('kpiPoSell').textContent = formatCurrency(data.todayPoSell || 0);
@@ -598,7 +632,7 @@ window.editCustomer = function(id) {
     if (document.getElementById('custPagarContainer')) document.getElementById('custPagarContainer').style.display = isPagarEnabled ? 'block' : 'none';
 
     const isShareEnabled = isShareEnabledForCustomer(customer);
-    const is30ProfitOnly = customer.share30ProfitOnly === true || customer.share30ProfitOnly === 'true' || customer.shareRate === 30;
+    const is30ProfitOnly = customer.share30ProfitOnly === true || customer.share30ProfitOnly === 'true';
     if (document.getElementById('custShare4060')) {
         document.getElementById('custShare4060').checked = isShareEnabled;
     }
@@ -606,7 +640,7 @@ window.editCustomer = function(id) {
         document.getElementById('custShare30ProfitOnly').checked = is30ProfitOnly;
     }
     if (document.getElementById('custShareRateVal')) {
-        document.getElementById('custShareRateVal').value = isShareEnabled ? customer.shareRate : 40.0;
+        document.getElementById('custShareRateVal').value = (isShareEnabled && customer.shareRate != null && customer.shareRate !== 100) ? customer.shareRate : 40.0;
     }
     if (document.getElementById('custShareRateContainer')) {
         document.getElementById('custShareRateContainer').style.display = isShareEnabled ? 'block' : 'none';
@@ -678,14 +712,15 @@ function calculateMathPreview() {
     if (rowShare) rowShare.style.display = isShareEnabled ? 'flex' : 'none';
     if (rowPagar) rowPagar.style.display = isPagarEnabled ? 'flex' : 'none';
 
-    const is30ProfitOnly = customer && (customer.share30ProfitOnly === true || customer.share30ProfitOnly === 'true' || shareRate === 30.0);
+    const is30ProfitOnly = customer && (customer.share30ProfitOnly === true || customer.share30ProfitOnly === 'true');
+    const effectiveSharePct = is30ProfitOnly ? 30.0 : shareRate;
 
     if (isShareEnabled) {
         const afterFarak = afterPay - farakVal;
         if (is30ProfitOnly) {
-            shareAmount = afterFarak > 0 ? (afterFarak * shareRate) / 100.0 : 0;
+            shareAmount = afterFarak > 0 ? (afterFarak * 30.0) / 100.0 : 0;
         } else {
-            shareAmount = (afterFarak * shareRate) / 100.0;
+            shareAmount = (afterFarak * effectiveSharePct) / 100.0;
         }
         netBalance = (afterFarak - shareAmount - actualPagarVal) + openingNet;
     } else {
@@ -700,7 +735,7 @@ function calculateMathPreview() {
     if (document.getElementById('previewTotalAfterComm')) document.getElementById('previewTotalAfterComm').textContent = formatCurrency(totalAfterComm);
     document.getElementById('previewPayment').textContent = `-` + formatCurrency(totalPayment);
 
-    if (document.getElementById('previewShareRate')) document.getElementById('previewShareRate').textContent = shareRate.toFixed(0);
+    if (document.getElementById('previewShareRate')) document.getElementById('previewShareRate').textContent = effectiveSharePct.toFixed(0);
     if (document.getElementById('previewShareAmount')) document.getElementById('previewShareAmount').textContent = formatCurrency(shareAmount);
 
     if (document.getElementById('previewYene')) document.getElementById('previewYene').textContent = formatCurrency(yeneVal);
@@ -723,6 +758,13 @@ window.processTradeAction = async function(actionType) {
     const customerId = document.getElementById('selectCustomer') ? document.getElementById('selectCustomer').value : '';
     if (!customerId) {
         alert('⚠️ Please select a customer / trader first!');
+        return;
+    }
+
+    // Enforce single market upload check
+    const isAlreadyUploaded = await checkIfMarketAlreadyUploaded();
+    if (isAlreadyUploaded) {
+        alert('⚠️ Market entry for this customer on this date has ALREADY been uploaded!\n\nChanges cannot be submitted from Daily Trade Entry & Math Engine. Please use the "✏️ Edit Full Receipt" button to make any changes.');
         return;
     }
 
@@ -791,23 +833,25 @@ window.processTradeAction = async function(actionType) {
             await loadDashboardMetrics();
             
             if (actionType === 'save') {
-                // Generate receipt statement data & canvas image
                 await triggerWhatsApp(customerId, false);
-                // Download receipt photo image onto user's device
                 downloadReceiptPhoto();
                 alert('✅ Trade Saved to Ledger & Receipt Downloaded Successfully!');
             } else if (actionType === 'share') {
-                // Generate receipt statement & launch WhatsApp Web/App directly
                 await triggerWhatsApp(customerId, true);
             }
 
-            // Reset market input fields after save/share
             document.querySelectorAll('#dynamicMarketInputs input').forEach(inp => inp.value = '0');
             if (document.getElementById('pagarAmount')) document.getElementById('pagarAmount').value = '0';
             if (document.getElementById('farakAmount')) document.getElementById('farakAmount').value = '0';
             calculateMathPreview();
+            checkIfMarketAlreadyUploaded();
         } else {
-            alert('❌ Failed to process trade transaction.');
+            let errorMsg = '❌ Failed to process trade transaction.';
+            try {
+                const errData = await res.json();
+                if (errData && errData.message) errorMsg = errData.message;
+            } catch (e) {}
+            alert(errorMsg);
         }
     } catch (err) {
         console.error('Error submitting trade:', err);
@@ -839,7 +883,7 @@ async function handleNewCustomerSubmit(e) {
         city: '',
         receiptStyle: 'TYPE_1',
         shareRate: shareRateVal,
-        share30ProfitOnly: isShare30ProfitOnlyChecked || shareRateVal === 30.0,
+        share30ProfitOnly: isShare30ProfitOnlyChecked,
         commissionPercentage: commVal,
         commissionEnabled: isCommEnabledChecked,
         pagar: pagarVal,
@@ -903,6 +947,8 @@ async function triggerWhatsApp(customerId, autoShare = false) {
             customerId = selectedCustId;
         }
 
+        currentActiveCustomerId = customerId;
+
         const customer = customersData ? customersData.find(c => c.id == customerId) : null;
 
         const tradeStyleEl = document.getElementById('tradeReceiptStyle');
@@ -927,19 +973,21 @@ async function triggerWhatsApp(customerId, autoShare = false) {
             }
         });
 
-        let yeneVal = document.getElementById('tradeYene') ? document.getElementById('tradeYene').value : '';
-        let deneVal = document.getElementById('tradeDene') ? document.getElementById('tradeDene').value : '';
-        let farakVal = document.getElementById('farakAmount') ? document.getElementById('farakAmount').value : '';
-        let pagarVal = document.getElementById('pagarAmount') ? document.getElementById('pagarAmount').value : '';
+        let yeneVal = '';
+        let deneVal = '';
+        let farakVal = '';
+        let pagarVal = '';
 
         const isLiveActiveForm = selectedCustId && selectedCustId == customerId && (sellPoNum > 0 || sellPcNum > 0 || payPoNum > 0 || payPcNum > 0);
 
-        if (selectedCustId && selectedCustId != customerId && customer) {
+        if (isLiveActiveForm) {
+            activeStyle = tradeStyleEl ? tradeStyleEl.value : (customer ? customer.receiptStyle : 'TYPE_1');
+            yeneVal = document.getElementById('tradeYene') ? document.getElementById('tradeYene').value : '';
+            deneVal = document.getElementById('tradeDene') ? document.getElementById('tradeDene').value : '';
+            farakVal = document.getElementById('farakAmount') ? document.getElementById('farakAmount').value : '';
+            pagarVal = document.getElementById('pagarAmount') ? document.getElementById('pagarAmount').value : '';
+        } else if (customer) {
             activeStyle = customer.receiptStyle || 'TYPE_1';
-            yeneVal = customer.yene != null ? customer.yene : '';
-            deneVal = customer.dene != null ? customer.dene : '';
-            farakVal = customer.farak != null ? customer.farak : '';
-            pagarVal = customer.pagar != null ? customer.pagar : '';
         }
 
         const params = new URLSearchParams();
@@ -950,12 +998,11 @@ async function triggerWhatsApp(customerId, autoShare = false) {
             params.append('sellPc', sellPcNum);
             params.append('payPo', payPoNum);
             params.append('payPc', payPcNum);
+            if (parseFloat(yeneVal) > 0) params.append('yene', yeneVal);
+            if (parseFloat(deneVal) > 0) params.append('dene', deneVal);
+            if (parseFloat(farakVal) !== 0 && farakVal !== '' && farakVal !== null) params.append('farak', farakVal);
+            if (parseFloat(pagarVal) > 0) params.append('pagar', pagarVal);
         }
-
-        if (yeneVal !== '' && yeneVal !== null) params.append('yene', yeneVal);
-        if (deneVal !== '' && deneVal !== null) params.append('dene', deneVal);
-        if (farakVal !== '' && farakVal !== null) params.append('farak', farakVal);
-        if (pagarVal !== '' && pagarVal !== null) params.append('pagar', pagarVal);
 
         const url = `/api/whatsapp/generate/${customerId}?` + params.toString();
         const res = await fetch(url);
@@ -1061,6 +1108,465 @@ function closeModal(id) {
     document.getElementById(id).style.display = 'none';
 }
 
+let latestDashboardData = null;
+
+// Toggle Dropdown for Markets Whose Receipts Are Made
+window.toggleReceiptsDropdown = function(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('receiptsDropdownMenu');
+    const card = document.getElementById('kpiGeneratedReceiptsCard');
+    const arrow = document.getElementById('receiptDropdownArrow');
+    if (!dropdown) return;
+
+    const isVisible = dropdown.style.display === 'block';
+    if (isVisible) {
+        dropdown.style.display = 'none';
+        if (card) {
+            card.style.zIndex = '';
+            card.classList.remove('dropdown-active');
+        }
+        if (arrow) arrow.textContent = '▼';
+    } else {
+        dropdown.style.display = 'block';
+        if (card) {
+            card.style.zIndex = '9999';
+            card.classList.add('dropdown-active');
+        }
+        dropdown.style.zIndex = '10000';
+        if (arrow) arrow.textContent = '▲';
+        populateAndRenderReceiptsDropdown();
+    }
+};
+
+// Document Click Event Listener to Auto-Close Dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('receiptsDropdownMenu');
+    const card = document.getElementById('kpiGeneratedReceiptsCard');
+    const arrow = document.getElementById('receiptDropdownArrow');
+    if (dropdown && dropdown.style.display === 'block') {
+        if (!card || !card.contains(e.target)) {
+            dropdown.style.display = 'none';
+            if (card) {
+                card.style.zIndex = '';
+                card.classList.remove('dropdown-active');
+            }
+            if (arrow) arrow.textContent = '▼';
+        }
+    }
+});
+
+window.triggerWhatsAppFromDropdown = function(customerId) {
+    const dropdown = document.getElementById('receiptsDropdownMenu');
+    const card = document.getElementById('kpiGeneratedReceiptsCard');
+    const arrow = document.getElementById('receiptDropdownArrow');
+    if (dropdown) dropdown.style.display = 'none';
+    if (card) {
+        card.style.zIndex = '';
+        card.classList.remove('dropdown-active');
+    }
+    if (arrow) arrow.textContent = '▼';
+
+    triggerWhatsApp(customerId);
+};
+
+function parseMessageToVisualReceipt(rawMsg, customer, balVal) {
+    const cityHeader = (customer.city || customer.marketZone || 'GENERAL').toUpperCase();
+    if (!rawMsg) {
+        return `
+            <div style="background: #090d16; border: 1.5px solid rgba(56, 189, 248, 0.4); border-radius: 0.75rem; padding: 0.75rem; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif;">
+                <div style="text-align: center; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 0.4rem; margin-bottom: 0.5rem;">
+                    <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">Date: ${new Date().toLocaleDateString('en-GB')}</div>
+                    <div style="font-size: 0.95rem; color: #38bdf8; font-weight: 900; margin-top: 0.1rem;">${escapeHtml(cityHeader)}</div>
+                </div>
+                <div style="background: rgba(56, 189, 248, 0.15); border: 1.5px solid #38bdf8; border-radius: 0.5rem; padding: 0.5rem; text-align: center; margin-top: 0.5rem;">
+                    <div style="font-size: 0.65rem; color: #38bdf8; font-weight: 800; text-transform: uppercase;">TOTAL BALANCE DUE</div>
+                    <div style="font-size: 1.1rem; color: #ffffff; font-weight: 900; margin-top: 0.1rem;">₹${balVal.toFixed(2)} ${balVal >= 0 ? 'yeṇe' : 'dene'}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    const lines = rawMsg.split('\n');
+    let dateStr = '';
+    let poSell = '0', poPay = '0';
+    let pcSell = '0', pcPay = '0';
+    let totalSell = '0', totalPay = '0';
+    let payLine = '';
+    let pagarLine = '';
+    let remainingLine = '';
+    let magilYeneLine = '';
+    let magilDeneLine = '';
+    let totalBalDueLine = '';
+
+    lines.forEach(l => {
+        const clean = l.replace(/\*/g, '').trim();
+        const upper = clean.toUpperCase();
+
+        if (upper.startsWith('DATE:')) {
+            dateStr = clean.replace(/^DATE:\s*/i, '');
+        } else if (upper.startsWith('PO:-') || upper.startsWith('PO:')) {
+            const parts = clean.split(/\s+/);
+            if (parts.length >= 3) {
+                poSell = parts[1] || '0';
+                poPay = parts[2] || '0';
+            }
+        } else if (upper.startsWith('PC:-') || upper.startsWith('PC:')) {
+            const parts = clean.split(/\s+/);
+            if (parts.length >= 3) {
+                pcSell = parts[1] || '0';
+                pcPay = parts[2] || '0';
+            }
+        } else if (upper.startsWith('TOTAL:-') || upper.startsWith('TOTAL:')) {
+            const parts = clean.split(/\s+/);
+            if (parts.length >= 3) {
+                totalSell = parts[1] || '0';
+                totalPay = parts[2] || '0';
+            }
+        } else if (upper.startsWith('PAYMENT:-')) {
+            payLine = clean.replace(/^PAYMENT:-\s*/i, '');
+        } else if (upper.startsWith('PAGAR:-')) {
+            pagarLine = clean.replace(/^PAGAR:-\s*/i, '');
+        } else if (upper.startsWith('REMAINING:-')) {
+            remainingLine = clean.replace(/^REMAINING:-\s*/i, '');
+        } else if (upper.includes('MAGIL YENE')) {
+            magilYeneLine = clean.replace(/.*MAGIL YENE:\s*/i, '').replace(/.*MAGIL YENE:-\s*/i, '').replace(/.*MAGIL YENE\s*/i, '');
+        } else if (upper.includes('MAGIL DENE')) {
+            magilDeneLine = clean.replace(/.*MAGIL DENE:\s*/i, '').replace(/.*MAGIL DENE:-\s*/i, '').replace(/.*MAGIL DENE\s*/i, '');
+        } else if (upper.includes('TOTAL BALANCE DUE')) {
+            totalBalDueLine = clean.replace(/.*TOTAL BALANCE DUE:\s*/i, '').replace(/.*TOTAL BALANCE DUE\s*/i, '');
+        }
+    });
+
+    if (!dateStr) dateStr = new Date().toLocaleDateString('en-GB');
+
+    let summaryHtml = '';
+    if (payLine) {
+        summaryHtml += `<div style="display: flex; justify-content: space-between; color: #cbd5e1;"><span>PAYMENT :-</span><span style="font-weight: 700; color: #f87171;">-${escapeHtml(payLine)}</span></div>`;
+    }
+    if (pagarLine) {
+        summaryHtml += `<div style="display: flex; justify-content: space-between; color: #cbd5e1;"><span>PAGAR :-</span><span style="font-weight: 700; color: #f87171;">-${escapeHtml(pagarLine)}</span></div>`;
+    }
+    if (remainingLine) {
+        summaryHtml += `<div style="display: flex; justify-content: space-between; color: #cbd5e1;"><span>REMAINING :-</span><span style="font-weight: 700; color: #38bdf8;">${escapeHtml(remainingLine)}</span></div>`;
+    }
+    if (magilYeneLine) {
+        summaryHtml += `<div style="display: flex; justify-content: space-between; color: #fbbf24;"><span>🔴 MAGIL YENE :-</span><span style="font-weight: 800;">${escapeHtml(magilYeneLine)}</span></div>`;
+    }
+    if (magilDeneLine) {
+        summaryHtml += `<div style="display: flex; justify-content: space-between; color: #f87171;"><span>🔴 MAGIL DENE :-</span><span style="font-weight: 800;">${escapeHtml(magilDeneLine)}</span></div>`;
+    }
+
+    if (!totalBalDueLine) {
+        totalBalDueLine = `${balVal.toFixed(0)} ${balVal >= 0 ? 'yeṇe' : 'dene'}`;
+    }
+
+    return `
+        <div style="background: #090d16; border: 1.5px solid rgba(56, 189, 248, 0.4); border-radius: 0.75rem; padding: 0.75rem; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif;">
+            <div style="text-align: center; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 0.4rem; margin-bottom: 0.5rem;">
+                <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">Date: ${escapeHtml(dateStr)}</div>
+                <div style="font-size: 0.95rem; color: #38bdf8; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 0.1rem;">
+                    ${escapeHtml(cityHeader)}
+                </div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-bottom: 0.5rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.12); color: #94a3b8;">
+                        <th style="text-align: left; padding: 0.25rem 0;">PARTICULARS</th>
+                        <th style="text-align: right; padding: 0.25rem 0; color: #34d399;">SELL (₹)</th>
+                        <th style="text-align: right; padding: 0.25rem 0; color: #f87171;">PAYMENT (₹)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="font-weight: 700; color: #e2e8f0; padding: 0.3rem 0;">PO</td>
+                        <td style="text-align: right; color: #34d399; font-weight: 700;">${escapeHtml(poSell)}</td>
+                        <td style="text-align: right; color: #f87171; font-weight: 700;">${escapeHtml(poPay)}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="font-weight: 700; color: #e2e8f0; padding: 0.3rem 0;">PC</td>
+                        <td style="text-align: right; color: #34d399; font-weight: 700;">${escapeHtml(pcSell)}</td>
+                        <td style="text-align: right; color: #f87171; font-weight: 700;">${escapeHtml(pcPay)}</td>
+                    </tr>
+                    <tr style="font-weight: 800; border-top: 1px solid rgba(255,255,255,0.2); border-bottom: 1px solid rgba(255,255,255,0.2);">
+                        <td style="color: #38bdf8; padding: 0.35rem 0;">TOTAL</td>
+                        <td style="text-align: right; color: #34d399;">${escapeHtml(totalSell)}</td>
+                        <td style="text-align: right; color: #f87171;">${escapeHtml(totalPay)}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            ${summaryHtml ? `<div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.78rem; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 0.4rem; margin-bottom: 0.5rem;">${summaryHtml}</div>` : ''}
+
+            <div style="background: rgba(56, 189, 248, 0.15); border: 1.5px solid #38bdf8; border-radius: 0.5rem; padding: 0.45rem 0.65rem; text-align: center;">
+                <div style="font-size: 0.65rem; color: #38bdf8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">TOTAL BALANCE DUE</div>
+                <div style="font-size: 1.1rem; color: #ffffff; font-weight: 900; margin-top: 0.1rem;">
+                    ${escapeHtml(totalBalDueLine)}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function populateAndRenderReceiptsDropdown() {
+    const listContainer = document.getElementById('receiptsDropdownList');
+    const countBadge = document.getElementById('receiptsDropdownCount');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = `
+        <div style="font-size: 0.8rem; color: #38bdf8; text-align: center; padding: 1.25rem 0;">
+            Loading market receipts... 🧾
+        </div>
+    `;
+
+    let customersList = customersData || [];
+    if (!customersList || customersList.length === 0) {
+        try {
+            const res = await fetch('/api/customers');
+            if (res.ok) {
+                customersList = await res.json();
+            }
+        } catch (e) {}
+    }
+
+    let activeCustomers = [];
+    const seenCustIds = new Set();
+
+    if (customersList && Array.isArray(customersList)) {
+        customersList.forEach(c => {
+            const hasActivity = (c.previousBalance && c.previousBalance !== 0) ||
+                                (c.yene && c.yene !== 0) ||
+                                (c.dene && c.dene !== 0) ||
+                                (c.magilBaki && c.magilBaki !== 0);
+            if (hasActivity && !seenCustIds.has(c.id)) {
+                seenCustIds.add(c.id);
+                activeCustomers.push(c);
+            }
+        });
+    }
+
+    if (activeCustomers.length === 0 && customersList && Array.isArray(customersList)) {
+        customersList.forEach(c => {
+            if (!seenCustIds.has(c.id)) {
+                seenCustIds.add(c.id);
+                activeCustomers.push(c);
+            }
+        });
+    }
+
+    if (countBadge) countBadge.textContent = activeCustomers.length;
+
+    if (activeCustomers.length === 0) {
+        listContainer.innerHTML = `
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 0.75rem 0;">
+                No receipts generated yet today.
+            </div>
+        `;
+        return;
+    }
+
+    // Fetch generated statements for all active customers in parallel
+    const statements = await Promise.all(
+        activeCustomers.map(c => 
+            fetch(`/api/whatsapp/generate/${c.id}`)
+                .then(r => r.ok ? r.json() : null)
+                .catch(() => null)
+        )
+    );
+
+    let html = '';
+    activeCustomers.forEach((c, idx) => {
+        const stmt = statements[idx];
+        const rawMessage = stmt && stmt.formattedMessage ? stmt.formattedMessage : '';
+        const cityStr = c.city || c.marketZone || 'General Market';
+        const balVal = c.previousBalance != null ? c.previousBalance : 0;
+        const balColor = balVal >= 0 ? '#34d399' : '#f87171';
+
+        const visualReceiptHtml = parseMessageToVisualReceipt(rawMessage, c, balVal);
+
+        html += `
+            <div style="background: rgba(15, 23, 42, 0.95); border: 1.5px solid rgba(56, 189, 248, 0.35); border-radius: 0.85rem; padding: 0.75rem; margin-bottom: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                <!-- Market Name Header -->
+                <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 0.4rem;">
+                    <div style="display: flex; align-items: center; gap: 0.55rem; overflow: hidden;">
+                        <span style="background: #38bdf8; color: #0f172a; font-weight: 900; font-size: 0.75rem; min-width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            ${idx + 1}
+                        </span>
+                        <div style="overflow: hidden;">
+                            <div style="font-weight: 800; color: #f8fafc; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${escapeHtml(c.name)}
+                            </div>
+                            <div style="font-size: 0.7rem; color: #94a3b8;">
+                                ${escapeHtml(cityStr)} • (${escapeHtml(c.marketCodes || 'PO,PC')})
+                            </div>
+                        </div>
+                    </div>
+                    <span style="font-weight: 800; color: ${balColor}; font-size: 0.88rem; flex-shrink: 0; background: rgba(15, 23, 42, 0.8); padding: 0.2rem 0.5rem; border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.08);">
+                        ₹${balVal.toFixed(2)}
+                    </span>
+                </div>
+
+                <!-- EXACT VISUAL RECEIPT CARD BELOW MARKET NAME -->
+                ${visualReceiptHtml}
+
+                <!-- Action Button -->
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding-top: 0.2rem;">
+                    <button onclick="triggerWhatsAppFromDropdown(${c.id})" style="background: #10b981; color: #ffffff; border: none; padding: 0.4rem 0.75rem; border-radius: 0.5rem; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 0.35rem; width: 100%; justify-content: center;">
+                        📲 Send WhatsApp Statement
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    listContainer.innerHTML = html;
+}
+
+// Open and Render Registered Markets List Modal
+async function openMarketsModal() {
+    try {
+        let allCustomers = [];
+        try {
+            const res = await fetch('/api/customers');
+            if (res.ok) {
+                allCustomers = await res.json();
+            }
+        } catch (e) {
+            console.warn('Error fetching customers for markets modal:', e);
+        }
+
+        if ((!allCustomers || allCustomers.length === 0) && typeof customersData !== 'undefined' && Array.isArray(customersData)) {
+            allCustomers = customersData;
+        }
+
+        let marketsList = [];
+        const seenKeys = new Set();
+
+        if (allCustomers && allCustomers.length > 0) {
+            allCustomers.forEach(c => {
+                const marketName = (c.city || c.marketZone || '').trim();
+                const custName = (c.name || '').trim();
+                
+                let displayName = '';
+                let filterKey = '';
+                if (marketName && custName) {
+                    displayName = `${marketName} (${custName})`;
+                    filterKey = marketName;
+                } else if (marketName) {
+                    displayName = marketName;
+                    filterKey = marketName;
+                } else if (custName) {
+                    displayName = `${custName} (General Market)`;
+                    filterKey = custName;
+                }
+
+                if (displayName && !seenKeys.has(displayName.toUpperCase())) {
+                    seenKeys.add(displayName.toUpperCase());
+                    marketsList.push({
+                        displayName: displayName,
+                        filterKey: filterKey || custName,
+                        marketName: marketName || 'General',
+                        customerName: custName
+                    });
+                }
+            });
+        }
+
+        // Fallback to /api/customers/markets if still empty
+        if (marketsList.length === 0) {
+            try {
+                const res = await fetch('/api/customers/markets');
+                if (res.ok) {
+                    const rawMarkets = await res.json();
+                    (rawMarkets || []).forEach(m => {
+                        if (m && typeof m === 'string' && m.trim()) {
+                            const trimmed = m.trim();
+                            if (!seenKeys.has(trimmed.toUpperCase())) {
+                                seenKeys.add(trimmed.toUpperCase());
+                                marketsList.push({
+                                    displayName: trimmed,
+                                    filterKey: trimmed,
+                                    marketName: trimmed,
+                                    customerName: ''
+                                });
+                            }
+                        }
+                    });
+                }
+            } catch (e) {}
+        }
+
+        renderMarketsList(marketsList);
+        openModal('marketsModal');
+    } catch (err) {
+        console.error('Failed to open markets list modal:', err);
+    }
+}
+
+function renderMarketsList(marketsList) {
+    const container = document.getElementById('marketsListContainer');
+    const countEl = document.getElementById('marketsModalCount');
+    if (!container) return;
+
+    if (countEl) {
+        countEl.textContent = marketsList ? marketsList.length : 0;
+    }
+
+    if (!marketsList || marketsList.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+                No registered markets or customer accounts found.
+            </div>
+        `;
+        return;
+    }
+
+    let html = '<div style="display: flex; flex-direction: column; gap: 0.65rem;">';
+    marketsList.forEach((item, idx) => {
+        html += `
+            <div class="market-list-item" onclick="filterByMarketFromModal('${escapeHtml(item.filterKey)}')" style="display: flex; align-items: center; justify-content: space-between; background: rgba(30, 41, 59, 0.7); border: 1px solid var(--border-card); padding: 0.75rem 1rem; border-radius: 0.85rem; cursor: pointer; transition: all 0.2s ease;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; font-weight: 800; font-size: 0.85rem; min-width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.35);">
+                        ${idx + 1}.
+                    </span>
+                    <span style="font-weight: 700; color: #f8fafc; font-size: 0.95rem;">
+                        ${escapeHtml(item.displayName)}
+                    </span>
+                </div>
+                <span style="font-size: 0.75rem; color: #34d399; font-weight: 600; background: rgba(52, 211, 153, 0.12); padding: 0.2rem 0.6rem; border-radius: 9999px; border: 1px solid rgba(52, 211, 153, 0.25);">
+                    Active
+                </span>
+            </div>
+        `;
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+
+window.filterByMarketFromModal = function(marketName) {
+    const dropdown = document.getElementById('receiptsDropdownMenu');
+    const card = document.getElementById('kpiGeneratedReceiptsCard');
+    const arrow = document.getElementById('receiptDropdownArrow');
+    if (dropdown) dropdown.style.display = 'none';
+    if (card) {
+        card.style.zIndex = '';
+        card.classList.remove('dropdown-active');
+    }
+    if (arrow) arrow.textContent = '▼';
+
+    closeModal('marketsModal');
+    const chip = document.querySelector(`.market-chips .chip[data-market="${marketName}"]`);
+    if (chip) {
+        chip.click();
+    } else {
+        loadCustomers('', marketName);
+    }
+};
+
+window.openMarketsModal = openMarketsModal;
+window.renderMarketsList = renderMarketsList;
+
 window.deleteCustomer = async function(id, name) {
     if (!confirm(`Are you sure you want to delete customer "${name}"? This action cannot be undone.`)) {
         return;
@@ -1088,6 +1594,94 @@ window.deleteCustomer = async function(id, name) {
 let currentCustomerName = 'Customer';
 let currentCleanMobile = '';
 let currentWaLink = '';
+let currentActiveCustomerId = null;
+
+window.saveEditedReceipt = async function() {
+    const custId = currentActiveCustomerId || (document.getElementById('selectCustomer') ? document.getElementById('selectCustomer').value : '');
+    if (!custId) {
+        alert('⚠️ Customer not identified. Please select a customer first.');
+        return;
+    }
+
+    const customerObj = customersData ? customersData.find(c => c.id == custId) : null;
+
+    const poSell = parseFloat(document.getElementById('editPoSell') ? document.getElementById('editPoSell').value : 0) || 0;
+    const poPay = parseFloat(document.getElementById('editPoPay') ? document.getElementById('editPoPay').value : 0) || 0;
+    const pcSell = parseFloat(document.getElementById('editPcSell') ? document.getElementById('editPcSell').value : 0) || 0;
+    const pcPay = parseFloat(document.getElementById('editPcPay') ? document.getElementById('editPcPay').value : 0) || 0;
+    const magilYene = parseFloat(document.getElementById('editMagilYene') ? document.getElementById('editMagilYene').value : 0) || 0;
+    const magilDene = parseFloat(document.getElementById('editMagilDene') ? document.getElementById('editMagilDene').value : 0) || 0;
+    const missPayment = parseFloat(document.getElementById('editMissPayment') ? document.getElementById('editMissPayment').value : 0) || 0;
+    const txDate = document.getElementById('txDate') ? document.getElementById('txDate').value : new Date().toISOString().split('T')[0];
+
+    const styleEl = document.getElementById('tradeReceiptStyle');
+    const style = styleEl && styleEl.value ? styleEl.value : (customerObj ? customerObj.receiptStyle : 'TYPE_1');
+    const isShareEnabled = isShareEnabledForCustomer(customerObj);
+    const effectiveShareRate = isShareEnabled ? (parseFloat(document.getElementById('shareRatePercent')?.value) || 40.0) : 100.0;
+    const isCommEnabled = isCommEnabledForCustomer(customerObj);
+    const commPercent = isCommEnabled ? (parseFloat(document.getElementById('commPercent')?.value) || (customerObj?.commissionRate != null ? customerObj.commissionRate : 10.0)) : 10.0;
+    const pagarVal = (customerObj && isPagarEnabledForCustomer(customerObj)) ? (customerObj.pagar || 0) : 0;
+
+    const payload = {
+        customerId: parseInt(custId),
+        transactionDate: txDate,
+        sellPo: poSell,
+        sellPc: pcSell,
+        paymentPo: poPay,
+        paymentPc: pcPay,
+        magilBaki: magilYene - magilDene,
+        pagarAmount: pagarVal,
+        farak: missPayment,
+        receiptStyle: style,
+        shareRate: effectiveShareRate,
+        rate: 1.0,
+        commissionPercentage: commPercent,
+        paymentAmount: poPay + pcPay,
+        paymentMode: 'Cash/UPI',
+        notes: 'Updated via Edit Full Receipt'
+    };
+
+    try {
+        const btn = document.getElementById('btnSaveEditedReceipt');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '⏳ Saving & Updating Everywhere...';
+        }
+
+        const res = await fetch('/api/transactions/update', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            await loadCustomers('', getSelectedMarket());
+            if (currentSegment === 'weekly') {
+                await loadWeeklyReceipts();
+            }
+            await loadDashboardMetrics();
+            await triggerWhatsApp(custId, false);
+
+            alert('✅ Receipt updated successfully! Today\'s Total Sell (PO & PC sell), Payments, Commission, and Ledgers have been updated everywhere across the application.');
+        } else {
+            let errorMsg = '❌ Failed to update receipt in database.';
+            try {
+                const errData = await res.json();
+                if (errData && errData.message) errorMsg = errData.message;
+            } catch (e) {}
+            alert(errorMsg);
+        }
+    } catch (err) {
+        console.error('Error saving edited receipt:', err);
+        alert('❌ Error updating receipt in database.');
+    } finally {
+        const btn = document.getElementById('btnSaveEditedReceipt');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '💾 Save & Update Receipt (Reflect Everywhere)';
+        }
+    }
+};
 
 function renderReceiptImageCanvas(formattedMessage, customerName) {
     currentCustomerName = customerName || 'Customer';

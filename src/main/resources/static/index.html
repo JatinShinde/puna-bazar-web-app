@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/styles.css?v=1.0.2">
+    <link rel="stylesheet" href="/css/styles.css?v=1.0.4">
 </head>
 <body>
 
@@ -69,16 +69,30 @@
                         <span id="kpiProfitLossBadge" class="kpi-badge profit">PROFIT</span>
                     </div>
                     <div class="value" id="kpiProfitLoss" style="color: #34d399;">₹0.00</div>
-                    <div style="font-size: 0.6875rem; color: var(--text-muted); margin-top: 0.15rem;">(Excl. Magil Yene / Dene)</div>
+                    <div style="font-size: 0.6875rem; color: var(--text-muted); margin-top: 0.15rem;">(Total Market Yeṇe / Balance)</div>
                 </div>
             </div>
 
-            <div class="kpi-card">
+            <div class="kpi-card" id="kpiGeneratedReceiptsCard" style="position: relative; cursor: pointer; user-select: none;" onclick="toggleReceiptsDropdown(event)" title="Click to view markets with receipts">
                 <div class="kpi-icon receipt" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">🧾</div>
-                <div class="kpi-data">
-                    <h3>Generated Receipts</h3>
+                <div class="kpi-data" style="width: 100%;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.25rem;">
+                        <h3>Generated Receipts</h3>
+                        <span id="receiptDropdownArrow" style="font-size: 0.75rem; color: #38bdf8; transition: transform 0.2s ease;">▼</span>
+                    </div>
                     <div class="value" id="kpiGeneratedReceipts" style="color: #38bdf8;">0</div>
                     <div style="font-size: 0.6875rem; color: var(--text-muted); margin-top: 0.15rem;" id="kpiMarketSubtext">out of 0 Markets</div>
+                </div>
+
+                <!-- Dropdown Menu for Markets Whose Receipts Are Made -->
+                <div id="receiptsDropdownMenu" class="receipts-dropdown-menu" onclick="event.stopPropagation();" style="display: none; position: absolute; top: calc(100% + 8px); left: 0; min-width: 320px; width: 380px; max-width: 95vw; background: #0f172a; border: 1.5px solid rgba(56, 189, 248, 0.5); border-radius: 1rem; padding: 0.85rem; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.95); z-index: 10000; backdrop-filter: blur(16px); max-height: 480px; overflow-y: auto;">
+                    <div style="font-size: 0.75rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.65rem; padding-bottom: 0.45rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center;">
+                        <span>🧾 Markets With Receipts</span>
+                        <span id="receiptsDropdownCount" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 0.15rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; border: 1px solid rgba(56, 189, 248, 0.3);">0</span>
+                    </div>
+                    <div id="receiptsDropdownList" style="display: flex; flex-direction: column; gap: 0.45rem;">
+                        <!-- Numbered Markets populate dynamically -->
+                    </div>
                 </div>
             </div>
         </section>
@@ -94,6 +108,9 @@
                 </div>
 
                 <form id="tradeForm">
+                    <div id="alreadyUploadedNotice" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1.5px solid #ef4444; color: #fca5a5; padding: 0.65rem 0.85rem; border-radius: 0.75rem; font-size: 0.8125rem; font-weight: 700; margin-bottom: 1rem;">
+                        ⚠️ Market entry for this customer on this date has ALREADY been uploaded! Changes cannot be submitted from Daily Trade Entry & Math Engine. Please use ✏️ Edit Full Receipt to make changes.
+                    </div>
                     <div class="form-group" style="margin-bottom: 1.25rem;">
                         <label for="selectCustomer">Select Customer / Trader *</label>
                         <select id="selectCustomer" class="form-control" required>
@@ -422,6 +439,11 @@
                 <textarea id="waReceiptEditText" rows="8" style="width: 100%; background: #0b1329; color: #38bdf8; border: 1px solid #334155; border-radius: 0.6rem; padding: 0.65rem; font-family: 'Courier New', monospace; font-size: 0.85rem; font-weight: 600; line-height: 1.4; resize: vertical;" oninput="onReceiptTextEdited()" onkeyup="onReceiptTextEdited()" onchange="onReceiptTextEdited()" onpaste="setTimeout(onReceiptTextEdited, 50)"></textarea>
                 
                 <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.4rem;">💡 Edit either the quick fields above OR the text box — receipt photo updates live!</p>
+
+                <!-- Save & Update Receipt Button -->
+                <button id="btnSaveEditedReceipt" type="button" onclick="saveEditedReceipt()" style="background: #059669; border: 1px solid #10b981; color: #ffffff; width: 100%; border-radius: 0.75rem; padding: 0.75rem; font-weight: 800; font-size: 0.95rem; margin-top: 0.65rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);">
+                    💾 Save & Update Receipt (Reflect Everywhere)
+                </button>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem;">
@@ -479,7 +501,7 @@
                     </div>
 
                     <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; color: #a7f3d0; font-weight: 600; margin: 0;">
-                        <input type="checkbox" id="custShare30ProfitOnly" onchange="if(this.checked){ document.getElementById('custShare4060').checked = true; document.getElementById('custShareRateContainer').style.display = 'block'; document.getElementById('custShareRateVal').value = '30'; }" style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;">
+                        <input type="checkbox" id="custShare30ProfitOnly" style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;">
                         <span>Apply 30% Share (Profit Only - No Loss Share)</span>
                     </label>
 
@@ -548,9 +570,32 @@
                 <button onclick="closeModal('weeklyEditModal')" class="btn-secondary" style="flex: 1;">Cancel</button>
             </div>
         </div>
+    <!-- Registered Markets List Modal -->
+    <div id="marketsModal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.6rem; color: #38bdf8;">
+                    <span style="font-size: 1.4rem;">🧾</span> Registered Market List
+                </h3>
+                <button class="close-btn" onclick="closeModal('marketsModal')">&times;</button>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 1rem; border-bottom: 1px solid var(--border-card); padding-bottom: 0.75rem;">
+                <span>Total Registered Markets: <strong id="marketsModalCount" style="color: #38bdf8; font-size: 0.95rem;">0</strong></span>
+                <span style="color: #34d399; font-size: 0.75rem;">💡 Click market to filter view</span>
+            </div>
+
+            <div id="marketsListContainer" style="max-height: 360px; overflow-y: auto; padding-right: 0.25rem;">
+                <!-- Dynamically populated list -->
+            </div>
+
+            <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end;">
+                <button onclick="closeModal('marketsModal')" class="btn-secondary" style="padding: 0.5rem 1.25rem; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border-card); color: var(--text-main); border-radius: 0.75rem; cursor: pointer; font-weight: 600;">Close</button>
+            </div>
+        </div>
     </div>
 
     <!-- Main JavaScript Bundle -->
-    <script src="/js/app.js?v=1.0.2"></script>
+    <script src="/js/app.js?v=1.0.4"></script>
 </body>
 </html>

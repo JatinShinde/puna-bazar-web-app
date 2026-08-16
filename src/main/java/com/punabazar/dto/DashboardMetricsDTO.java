@@ -16,14 +16,19 @@ public class DashboardMetricsDTO {
     private List<String> activeMarkets;
     private Long generatedReceiptCount;
     private Long totalCustomerCount;
+    private List<String> generatedReceiptMarkets;
 
     public DashboardMetricsDTO() {}
 
     public DashboardMetricsDTO(BigDecimal todayTotalSell, BigDecimal todayPoSell, BigDecimal todayPcSell, BigDecimal todayTotalPayment, BigDecimal todayTotalCommission, BigDecimal todayProfitLoss, String todayProfitLossStatus, BigDecimal totalCustomerBalance, Long activeCustomerCount, List<String> activeMarkets) {
-        this(todayTotalSell, todayPoSell, todayPcSell, todayTotalPayment, todayTotalCommission, todayProfitLoss, todayProfitLossStatus, totalCustomerBalance, activeCustomerCount, activeMarkets, 0L, activeCustomerCount);
+        this(todayTotalSell, todayPoSell, todayPcSell, todayTotalPayment, todayTotalCommission, todayProfitLoss, todayProfitLossStatus, totalCustomerBalance, activeCustomerCount, activeMarkets, 0L, activeCustomerCount, new java.util.ArrayList<>());
     }
 
     public DashboardMetricsDTO(BigDecimal todayTotalSell, BigDecimal todayPoSell, BigDecimal todayPcSell, BigDecimal todayTotalPayment, BigDecimal todayTotalCommission, BigDecimal todayProfitLoss, String todayProfitLossStatus, BigDecimal totalCustomerBalance, Long activeCustomerCount, List<String> activeMarkets, Long generatedReceiptCount, Long totalCustomerCount) {
+        this(todayTotalSell, todayPoSell, todayPcSell, todayTotalPayment, todayTotalCommission, todayProfitLoss, todayProfitLossStatus, totalCustomerBalance, activeCustomerCount, activeMarkets, generatedReceiptCount, totalCustomerCount, new java.util.ArrayList<>());
+    }
+
+    public DashboardMetricsDTO(BigDecimal todayTotalSell, BigDecimal todayPoSell, BigDecimal todayPcSell, BigDecimal todayTotalPayment, BigDecimal todayTotalCommission, BigDecimal todayProfitLoss, String todayProfitLossStatus, BigDecimal totalCustomerBalance, Long activeCustomerCount, List<String> activeMarkets, Long generatedReceiptCount, Long totalCustomerCount, List<String> generatedReceiptMarkets) {
         this.todayTotalSell = todayTotalSell;
         this.todayPoSell = todayPoSell;
         this.todayPcSell = todayPcSell;
@@ -36,6 +41,7 @@ public class DashboardMetricsDTO {
         this.activeMarkets = activeMarkets;
         this.generatedReceiptCount = generatedReceiptCount;
         this.totalCustomerCount = totalCustomerCount;
+        this.generatedReceiptMarkets = generatedReceiptMarkets;
     }
 
     public DashboardMetricsDTO(BigDecimal todayTotalSell, BigDecimal todayTotalPayment, BigDecimal todayTotalCommission, BigDecimal totalCustomerBalance, Long activeCustomerCount, List<String> activeMarkets) {
@@ -77,4 +83,7 @@ public class DashboardMetricsDTO {
 
     public Long getTotalCustomerCount() { return totalCustomerCount; }
     public void setTotalCustomerCount(Long totalCustomerCount) { this.totalCustomerCount = totalCustomerCount; }
+
+    public List<String> getGeneratedReceiptMarkets() { return generatedReceiptMarkets; }
+    public void setGeneratedReceiptMarkets(List<String> generatedReceiptMarkets) { this.generatedReceiptMarkets = generatedReceiptMarkets; }
 }

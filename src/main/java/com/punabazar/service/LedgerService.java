@@ -90,18 +90,19 @@ public class LedgerService {
 
                 BigDecimal runningNet = afterPay.subtract(pagarVal).subtract(farakVal);
 
-                BigDecimal shareRate = customer != null && customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00");
-                boolean isShareEnabled = shareRate.compareTo(new BigDecimal("100.00")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0;
-                boolean is30ProfitOnly = customer != null && (Boolean.TRUE.equals(customer.getShare30ProfitOnly()) || shareRate.compareTo(new BigDecimal("30.00")) == 0);
+                boolean is30ProfitOnly = customer != null && Boolean.TRUE.equals(customer.getShare30ProfitOnly());
+                BigDecimal shareRate = (customer != null && customer.getShareRate() != null) ? customer.getShareRate() : new BigDecimal("100.00");
+                BigDecimal rateToApply = is30ProfitOnly ? new BigDecimal("30.00") : shareRate;
+                boolean isShareEnabled = is30ProfitOnly || (shareRate.compareTo(new BigDecimal("100.00")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
 
                 BigDecimal shareAmount = BigDecimal.ZERO;
                 if (isShareEnabled) {
                     if (is30ProfitOnly) {
                         if (runningNet.compareTo(BigDecimal.ZERO) > 0) {
-                            shareAmount = runningNet.multiply(shareRate).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
+                            shareAmount = runningNet.multiply(rateToApply).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
                         }
                     } else {
-                        shareAmount = runningNet.multiply(shareRate).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
+                        shareAmount = runningNet.multiply(rateToApply).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
                     }
                 }
 
@@ -112,12 +113,12 @@ public class LedgerService {
             todayNetSum = todayTotalSell.subtract(todayTotalCommission).subtract(todayTotalPayment);
         }
 
-        String profitLossStatus = todayNetSum.compareTo(BigDecimal.ZERO) >= 0 ? "PROFIT" : "LOSS";
-        BigDecimal todayProfitLoss = todayNetSum.abs();
-
-        BigDecimal totalCustomerBalance = customers != null ? customers.stream()
-                .map(Customer::getPreviousBalance)
+        BigDecimal totalCustomerBalance = (customers != null) ? customers.stream()
+                .map(c -> c.getPreviousBalance() != null ? c.getPreviousBalance() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add) : BigDecimal.ZERO;
+
+        String profitLossStatus = totalCustomerBalance.compareTo(BigDecimal.ZERO) >= 0 ? "PROFIT" : "LOSS";
+        BigDecimal todayProfitLoss = totalCustomerBalance.abs();
 
         List<String> markets = customerRepository.findDistinctCities();
 
@@ -156,6 +157,20 @@ public class LedgerService {
         long generatedReceiptCount = activeCustomerIdsWithReceipts.size();
         long totalCustomerCount = customers != null ? customers.size() : 0;
 
+        List<String> generatedReceiptMarkets = new java.util.ArrayList<>();
+        if (customers != null) {
+            for (Customer c : customers) {
+                if (c.getId() != null && activeCustomerIdsWithReceipts.contains(c.getId())) {
+                    String cityStr = c.getCity() != null ? c.getCity().trim() : "";
+                    String nameStr = c.getName() != null ? c.getName().trim() : "";
+                    String label = (!cityStr.isEmpty()) ? cityStr + " (" + nameStr + ")" : nameStr + " (General Market)";
+                    if (!generatedReceiptMarkets.contains(label)) {
+                        generatedReceiptMarkets.add(label);
+                    }
+                }
+            }
+        }
+
         return new DashboardMetricsDTO(
                 todayTotalSell,
                 todayPoSell,
@@ -168,7 +183,8 @@ public class LedgerService {
                 totalCustomerCount,
                 markets,
                 generatedReceiptCount,
-                totalCustomerCount
+                totalCustomerCount,
+                generatedReceiptMarkets
         );
     }
 

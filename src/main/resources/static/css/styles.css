@@ -115,6 +115,8 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1.25rem;
     margin-bottom: 2rem;
+    position: relative;
+    z-index: 100;
 }
 
 .kpi-card {
@@ -128,6 +130,11 @@ body {
     gap: 1rem;
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4);
     transition: transform 0.2s ease;
+    position: relative;
+}
+
+.kpi-card.dropdown-active {
+    z-index: 9999 !important;
 }
 
 .kpi-card:hover {
@@ -590,6 +597,22 @@ tr:hover td {
     grid-column: span 2;
     background: #7c3aed;
     color: #ffffff;
+}
+
+/* Custom Sleek Dark Scrollbar for Receipts Dropdown */
+.receipts-dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+}
+.receipts-dropdown-menu::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 8px;
+}
+.receipts-dropdown-menu::-webkit-scrollbar-thumb {
+    background: rgba(56, 189, 248, 0.4);
+    border-radius: 8px;
+}
+.receipts-dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(56, 189, 248, 0.75);
 }
 
 .btn-share:hover {
