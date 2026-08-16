@@ -41,7 +41,7 @@ public class LedgerService {
         Double sellSum = transactionRepository.getTodayTotalSell(today);
         Double poSum = transactionRepository.getTodayPoSell(today);
         Double pcSum = transactionRepository.getTodayPcSell(today);
-        Double paySum = paymentRepository.getTodayTotalPayments(today);
+        Double paySum = transactionRepository.getTodayTotalPayments(today);
         Double commSum = commissionRepository.getTodayTotalCommission(today);
 
         // If today's aggregate queries returned 0/null, fallback to sum of all recorded transactions
