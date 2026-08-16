@@ -83,8 +83,14 @@ public class TransactionService {
             paymentRepository.save(payment);
         }
 
-        // 5. Compute Net Balance Due (Total yeṇe = magilBaki + totalSell - commissionAmount - totalPayment - pagarAmount)
-        BigDecimal netBalance = magilBaki.add(totalSell).subtract(commissionAmount).subtract(totalPayment).subtract(pagarAmount);
+        // 5. Compute Net Balance Due with Share deduction included (e.g. 40/60 share, 30% profit share)
+        BigDecimal farakVal = request.getFarak() != null ? request.getFarak() : (customer.getFarak() != null ? customer.getFarak() : BigDecimal.ZERO);
+        BigDecimal shareRateVal = request.getShareRate() != null ? request.getShareRate() : (customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00"));
+        Boolean share30Val = customer.getShare30ProfitOnly();
+
+        BigDecimal netBalance = calculationEngineService.calculateNetBalanceDueWithShare(
+                magilBaki, totalSell, commissionAmount, totalPayment, pagarAmount, farakVal, shareRateVal, share30Val
+        );
 
         // 6. Create Ledger Entry
         Ledger ledger = new Ledger(customer, date, totalSell, commissionAmount, totalPayment, magilBaki, netBalance);
@@ -169,7 +175,13 @@ public class TransactionService {
             ledger.setPreviousBalance(magilBaki);
         }
 
-        BigDecimal netBalance = magilBaki.add(totalSell).subtract(commissionAmount).subtract(totalPayment).subtract(pagarAmount);
+        BigDecimal farakVal = request.getFarak() != null ? request.getFarak() : (customer.getFarak() != null ? customer.getFarak() : BigDecimal.ZERO);
+        BigDecimal shareRateVal = request.getShareRate() != null ? request.getShareRate() : (customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00"));
+        Boolean share30Val = customer.getShare30ProfitOnly();
+
+        BigDecimal netBalance = calculationEngineService.calculateNetBalanceDueWithShare(
+                magilBaki, totalSell, commissionAmount, totalPayment, pagarAmount, farakVal, shareRateVal, share30Val
+        );
         ledger.setNetBalanceDue(netBalance);
         ledger = ledgerRepository.save(ledger);
 
