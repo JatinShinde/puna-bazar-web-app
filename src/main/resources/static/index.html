@@ -397,9 +397,19 @@
 
                 <!-- Weekly Quick Fields Form Grid -->
                 <div id="weeklyEditFields" style="display: none; background: #0b1329; padding: 0.6rem; border-radius: 0.6rem; border: 1px solid #1e293b; margin-bottom: 0.6rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <div>
+                            <label style="font-size: 0.75rem; color: #fbbf24; font-weight: 800;">Magil Yene (₹)</label>
+                            <input id="editWeeklyMagilYene" type="number" placeholder="0" style="width: 100%; background: #1e293b; color: #fbbf24; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.85rem; font-weight: 700;" oninput="onWeeklyQuickFieldEdited()">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; color: #f87171; font-weight: 800;">Magil Dene (₹)</label>
+                            <input id="editWeeklyMagilDene" type="number" placeholder="0" style="width: 100%; background: #1e293b; color: #f87171; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.85rem; font-weight: 700;" oninput="onWeeklyQuickFieldEdited()">
+                        </div>
+                    </div>
                     <div>
-                        <label style="font-size: 0.75rem; color: #fbbf24; font-weight: 800;">Weekly Commission (%)</label>
-                        <input id="editWeeklyComm" type="number" placeholder="0" style="width: 100%; background: #1e293b; color: #fbbf24; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.85rem; font-weight: 700;" oninput="onWeeklyQuickFieldEdited()">
+                        <label style="font-size: 0.75rem; color: #a7f3d0; font-weight: 800;">Weekly Commission (%)</label>
+                        <input id="editWeeklyComm" type="number" placeholder="0" style="width: 100%; background: #1e293b; color: #a7f3d0; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.85rem; font-weight: 700;" oninput="onWeeklyQuickFieldEdited()">
                     </div>
                 </div>
 
