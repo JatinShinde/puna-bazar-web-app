@@ -77,43 +77,52 @@ public class DataInitializer implements CommandLineRunner {
             }
         }
 
-        // 3. Seed Live Daily Transactions if empty
-        if (transactionRepository.count() == 0) {
-            try {
-                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-                mapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-                org.springframework.core.io.ClassPathResource txResource = new org.springframework.core.io.ClassPathResource("seed_transactions.json");
-                if (txResource.exists()) {
-                    java.util.Map<String, Customer> nameToCustomer = new java.util.HashMap<>();
-                    for (Customer c : customerRepository.findAll()) {
-                        nameToCustomer.put(c.getName().trim(), c);
-                    }
+        // 3. Seed & Sync Live Daily Transactions from seed_transactions.json
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            mapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            org.springframework.core.io.ClassPathResource txResource = new org.springframework.core.io.ClassPathResource("seed_transactions.json");
+            if (txResource.exists()) {
+                java.util.Map<String, Customer> nameToCustomer = new java.util.HashMap<>();
+                for (Customer c : customerRepository.findAll()) {
+                    nameToCustomer.put(c.getName().trim(), c);
+                }
 
-                    try (java.io.InputStream inputStream = txResource.getInputStream()) {
-                        java.util.List<Transaction> seedTxs = mapper.readValue(
-                            inputStream, 
-                            new com.fasterxml.jackson.core.type.TypeReference<java.util.List<Transaction>>() {}
-                        );
-                        int count = 0;
-                        for (Transaction tx : seedTxs) {
-                            if (tx.getCustomer() != null && tx.getCustomer().getName() != null) {
-                                Customer matched = nameToCustomer.get(tx.getCustomer().getName().trim());
-                                if (matched != null) {
-                                    tx.setId(null);
-                                    tx.setCustomer(matched);
-                                    transactionRepository.save(tx);
-                                    count++;
+                try (java.io.InputStream inputStream = txResource.getInputStream()) {
+                    java.util.List<Transaction> seedTxs = mapper.readValue(
+                        inputStream, 
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.List<Transaction>>() {}
+                    );
+                    int count = 0;
+                    for (Transaction stx : seedTxs) {
+                        if (stx.getCustomer() != null && stx.getCustomer().getName() != null) {
+                            Customer matched = nameToCustomer.get(stx.getCustomer().getName().trim());
+                            if (matched != null) {
+                                java.util.List<Transaction> existingList = transactionRepository.findByCustomerIdAndTransactionDate(matched.getId(), stx.getTransactionDate());
+                                if (existingList != null && !existingList.isEmpty()) {
+                                    Transaction current = existingList.get(0);
+                                    current.setSellPo(stx.getSellPo());
+                                    current.setSellPcAmount(stx.getSellPcAmount());
+                                    current.setPaymentPo(stx.getPaymentPo());
+                                    current.setPaymentPc(stx.getPaymentPc());
+                                    current.setTotalSell(stx.getTotalSell());
+                                    transactionRepository.save(current);
+                                } else {
+                                    stx.setId(null);
+                                    stx.setCustomer(matched);
+                                    transactionRepository.save(stx);
                                 }
+                                count++;
                             }
                         }
-                        System.out.println(">>> Successfully seeded " + count + " live daily market transactions into MySQL!");
                     }
+                    System.out.println(">>> Successfully synced " + count + " live daily market transactions in MySQL!");
                 }
-            } catch (Exception e) {
-                System.err.println(">>> Error seeding transactions from JSON backup: " + e.getMessage());
-                e.printStackTrace();
             }
+        } catch (Exception e) {
+            System.err.println(">>> Error syncing transactions from JSON backup: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
