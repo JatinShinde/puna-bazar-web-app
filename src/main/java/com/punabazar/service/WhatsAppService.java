@@ -33,6 +33,65 @@ public class WhatsAppService {
         this.whatsappTemplateRepository = whatsappTemplateRepository;
     }
 
+    public static BigDecimal calculateReceiptTodayNet(Customer customer, Transaction tx) {
+        if (tx == null) return BigDecimal.ZERO;
+
+        BigDecimal sellPoVal = tx.getSellPo() != null ? tx.getSellPo() : BigDecimal.ZERO;
+        BigDecimal sellPcVal = tx.getSellPcAmount() != null ? tx.getSellPcAmount() : BigDecimal.ZERO;
+        BigDecimal totalSellVal = tx.getTotalSell() != null ? tx.getTotalSell() : sellPoVal.add(sellPcVal);
+
+        BigDecimal payPoVal = tx.getPaymentPo() != null ? tx.getPaymentPo() : BigDecimal.ZERO;
+        BigDecimal payPcVal = tx.getPaymentPc() != null ? tx.getPaymentPc() : BigDecimal.ZERO;
+        BigDecimal totalPaymentVal = payPoVal.add(payPcVal);
+
+        boolean isCommEnabled = customer != null && Boolean.TRUE.equals(customer.getCommissionEnabled());
+        BigDecimal commRateVal = (customer != null && customer.getCommissionRate() != null) ? customer.getCommissionRate() : new BigDecimal("10.00");
+
+        BigDecimal commAmountVal = BigDecimal.ZERO;
+        if (isCommEnabled) {
+            commAmountVal = totalSellVal.multiply(commRateVal).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal totalAfterCommVal = totalSellVal.subtract(commAmountVal);
+        BigDecimal afterPayVal = totalAfterCommVal.subtract(totalPaymentVal);
+
+        BigDecimal pagarVal = BigDecimal.ZERO;
+        if (tx.getPagarAmount() != null) {
+            pagarVal = tx.getPagarAmount();
+        } else if (customer != null && Boolean.TRUE.equals(customer.getPagarEnabled()) && customer.getPagar() != null) {
+            pagarVal = customer.getPagar();
+        }
+
+        BigDecimal runningNet = afterPayVal;
+        if (pagarVal != null && pagarVal.compareTo(BigDecimal.ZERO) > 0) {
+            runningNet = runningNet.subtract(pagarVal);
+        }
+
+        BigDecimal farakVal = BigDecimal.ZERO;
+        if (customer != null && customer.getFarak() != null && customer.getFarak().compareTo(BigDecimal.ZERO) != 0) {
+            farakVal = customer.getFarak();
+        }
+        BigDecimal afterFarak = runningNet.subtract(farakVal);
+
+        BigDecimal shareRate = customer != null && customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00");
+        boolean is30ProfitOnly = customer != null && Boolean.TRUE.equals(customer.getShare30ProfitOnly());
+        boolean isShareEnabled = is30ProfitOnly || (shareRate != null && shareRate.compareTo(new BigDecimal("100.00")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
+        BigDecimal effectiveShareRate = is30ProfitOnly ? new BigDecimal("30.00") : (shareRate != null ? shareRate : new BigDecimal("100.00"));
+
+        BigDecimal shareAmount = BigDecimal.ZERO;
+        if (isShareEnabled) {
+            if (is30ProfitOnly) {
+                if (afterFarak.compareTo(BigDecimal.ZERO) > 0) {
+                    shareAmount = afterFarak.multiply(effectiveShareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                }
+            } else {
+                shareAmount = afterFarak.multiply(effectiveShareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+            }
+        }
+
+        return afterFarak.subtract(shareAmount);
+    }
+
     public WhatsAppStatementDTO generateStatement(Long customerId) {
         return generateStatement(customerId, null, null, null, null, null, null, null, null);
     }

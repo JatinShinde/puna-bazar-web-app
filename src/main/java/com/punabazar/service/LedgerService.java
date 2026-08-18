@@ -63,35 +63,7 @@ public class LedgerService {
                 BigDecimal paymentPc = tx.getPaymentPc() != null ? tx.getPaymentPc() : BigDecimal.ZERO;
                 BigDecimal totalPay = paymentPo.add(paymentPc);
 
-                boolean isCommEnabled = customer != null && Boolean.TRUE.equals(customer.getCommissionEnabled());
-                BigDecimal commRate = (customer != null && customer.getCommissionRate() != null) ? customer.getCommissionRate() : new BigDecimal("10.00");
-                BigDecimal commCut = isCommEnabled ? totalSell.multiply(commRate).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
-
-                BigDecimal totalAfterComm = totalSell.subtract(commCut);
-                BigDecimal afterPay = totalAfterComm.subtract(totalPay);
-
-                BigDecimal pagarVal = tx.getPagarAmount() != null ? tx.getPagarAmount() : (customer != null && Boolean.TRUE.equals(customer.getPagarEnabled()) && customer.getPagar() != null ? customer.getPagar() : BigDecimal.ZERO);
-                BigDecimal farakVal = customer != null && customer.getFarak() != null ? customer.getFarak() : BigDecimal.ZERO;
-
-                BigDecimal runningNet = afterPay.subtract(pagarVal).subtract(farakVal);
-
-                boolean is30ProfitOnly = customer != null && Boolean.TRUE.equals(customer.getShare30ProfitOnly());
-                BigDecimal shareRate = (customer != null && customer.getShareRate() != null) ? customer.getShareRate() : new BigDecimal("100.00");
-                BigDecimal rateToApply = is30ProfitOnly ? new BigDecimal("30.00") : shareRate;
-                boolean isShareEnabled = is30ProfitOnly || (shareRate.compareTo(new BigDecimal("100.00")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
-
-                BigDecimal shareAmount = BigDecimal.ZERO;
-                if (isShareEnabled) {
-                    if (is30ProfitOnly) {
-                        if (runningNet.compareTo(BigDecimal.ZERO) > 0) {
-                            shareAmount = runningNet.multiply(rateToApply).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
-                        }
-                    } else {
-                        shareAmount = runningNet.multiply(rateToApply).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
-                    }
-                }
-
-                BigDecimal txTodayNet = runningNet.subtract(shareAmount);
+                BigDecimal txTodayNet = WhatsAppService.calculateReceiptTodayNet(customer, tx);
                 todayNetSum = todayNetSum.add(txTodayNet);
             }
         }
