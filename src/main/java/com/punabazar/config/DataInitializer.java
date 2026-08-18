@@ -51,11 +51,12 @@ public class DataInitializer implements CommandLineRunner {
             userRepository.save(admin);
         }
 
-        // 2. Seed Live Customers from JSON backup if database is empty
+        // 2. Seed Live Customers & Transactions from JSON backup if database is empty
         if (customerRepository.count() == 0) {
             try {
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                mapper.findAndRegisterModules();
+                mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+                mapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
                 org.springframework.core.io.ClassPathResource resource = new org.springframework.core.io.ClassPathResource("seed_customers.json");
                 if (resource.exists()) {
                     try (java.io.InputStream inputStream = resource.getInputStream()) {
@@ -72,6 +73,45 @@ public class DataInitializer implements CommandLineRunner {
                 }
             } catch (Exception e) {
                 System.err.println(">>> Error seeding customers from JSON backup: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+
+        // 3. Seed Live Daily Transactions if empty
+        if (transactionRepository.count() == 0) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+                mapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+                org.springframework.core.io.ClassPathResource txResource = new org.springframework.core.io.ClassPathResource("seed_transactions.json");
+                if (txResource.exists()) {
+                    java.util.Map<String, Customer> nameToCustomer = new java.util.HashMap<>();
+                    for (Customer c : customerRepository.findAll()) {
+                        nameToCustomer.put(c.getName().trim(), c);
+                    }
+
+                    try (java.io.InputStream inputStream = txResource.getInputStream()) {
+                        java.util.List<Transaction> seedTxs = mapper.readValue(
+                            inputStream, 
+                            new com.fasterxml.jackson.core.type.TypeReference<java.util.List<Transaction>>() {}
+                        );
+                        int count = 0;
+                        for (Transaction tx : seedTxs) {
+                            if (tx.getCustomer() != null && tx.getCustomer().getName() != null) {
+                                Customer matched = nameToCustomer.get(tx.getCustomer().getName().trim());
+                                if (matched != null) {
+                                    tx.setId(null);
+                                    tx.setCustomer(matched);
+                                    transactionRepository.save(tx);
+                                    count++;
+                                }
+                            }
+                        }
+                        System.out.println(">>> Successfully seeded " + count + " live daily market transactions into MySQL!");
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println(">>> Error seeding transactions from JSON backup: " + e.getMessage());
                 e.printStackTrace();
             }
         }
