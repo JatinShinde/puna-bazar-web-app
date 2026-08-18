@@ -412,6 +412,29 @@ function renderCustomerTable(list) {
         `;
         tbody.appendChild(tr);
     });
+
+    const tfoot = document.getElementById('customerTableFoot');
+    if (tfoot) {
+        const plVal = latestDashboardData ? (parseFloat(latestDashboardData.todayProfitLoss) || 0) : 0;
+        const plStatus = latestDashboardData ? (latestDashboardData.todayProfitLossStatus || 'PROFIT') : 'PROFIT';
+        const isProf = plStatus === 'PROFIT';
+        const badgeBg = isProf ? 'rgba(52, 211, 153, 0.15)' : 'rgba(248, 113, 113, 0.15)';
+        const badgeColor = isProf ? '#34d399' : '#f87171';
+        const badgeBorder = isProf ? '1px solid rgba(52, 211, 153, 0.3)' : '1px solid rgba(248, 113, 113, 0.3)';
+
+        tfoot.innerHTML = `
+            <tr style="background: #0f172a; border-top: 2px solid #1e293b;">
+                <td colspan="3" style="font-weight: 800; color: #f8fafc; font-size: 0.9rem; padding: 0.75rem 1rem;">
+                    📊 TODAY'S TOTAL NET PROFIT / LOSS SUMMARY
+                </td>
+                <td colspan="2" style="text-align: right; padding: 0.75rem 1rem;">
+                    <span style="display: inline-block; padding: 0.4rem 0.85rem; border-radius: 0.6rem; font-weight: 800; font-size: 0.9rem; background: ${badgeBg}; color: ${badgeColor}; border: ${badgeBorder};">
+                        ${isProf ? '📈 TODAY\'S PROFIT' : '📉 TODAY\'S LOSS'}: ₹${plVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }
 }
 
 let currentSegment = 'daily';
@@ -465,6 +488,8 @@ function renderWeeklyTable(list) {
 
     if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 1rem;">No weekly receipt records found for selected market.</td></tr>';
+        const tfoot = document.getElementById('weeklyTableFoot');
+        if (tfoot) tfoot.innerHTML = '';
         return;
     }
 
@@ -512,6 +537,55 @@ function renderWeeklyTable(list) {
 
         tbody.appendChild(tr);
     });
+
+    const tfoot = document.getElementById('weeklyTableFoot');
+    if (tfoot) {
+        let sumMon = 0, sumTue = 0, sumWed = 0, sumThu = 0, sumFri = 0, sumSat = 0, sumSun = 0, sumTotalNet = 0;
+        filtered.forEach(item => {
+            sumMon += item.mondayNet || 0;
+            sumTue += item.tuesdayNet || 0;
+            sumWed += item.wednesdayNet || 0;
+            sumThu += item.thursdayNet || 0;
+            sumFri += item.fridayNet || 0;
+            sumSat += item.saturdayNet || 0;
+            sumSun += item.sundayNet || 0;
+            sumTotalNet += item.weeklyTotalNet || 0;
+        });
+
+        const formatFooterCell = (val) => {
+            if (val == null || val === 0) return '<span style="color: #64748b; font-weight: 400;">-</span>';
+            const isPos = val >= 0;
+            const color = isPos ? '#34d399' : '#f87171';
+            const suffix = isPos ? 'y' : 'd';
+            return `<span style="font-weight: 800; color: ${color};">₹${Math.abs(val).toLocaleString('en-IN')} <small>${suffix}</small></span>`;
+        };
+
+        const isWeeklyProf = sumTotalNet >= 0;
+        const weeklyColor = isWeeklyProf ? '#34d399' : '#f87171';
+        const weeklyBadgeBg = isWeeklyProf ? 'rgba(52, 211, 153, 0.15)' : 'rgba(248, 113, 113, 0.15)';
+        const weeklyBadgeBorder = isWeeklyProf ? '1px solid rgba(52, 211, 153, 0.3)' : '1px solid rgba(248, 113, 113, 0.3)';
+
+        tfoot.innerHTML = `
+            <tr style="background: #0f172a; border-top: 2px solid #1e293b; font-weight: 800;">
+                <td style="color: #f8fafc; font-size: 0.85rem; padding: 0.75rem 0.5rem;">
+                    📊 WEEKLY MARKET TOTALS
+                </td>
+                <td style="text-align: center; padding: 0.75rem 0.25rem;">${formatFooterCell(sumMon)}</td>
+                <td style="text-align: center; padding: 0.75rem 0.25rem;">${formatFooterCell(sumTue)}</td>
+                <td style="text-align: center; padding: 0.75rem 0.25rem;">${formatFooterCell(sumWed)}</td>
+                <td style="text-align: center; padding: 0.75rem 0.25rem;">${formatFooterCell(sumThu)}</td>
+                <td style="text-align: center; padding: 0.75rem 0.25rem;">${formatFooterCell(sumFri)}</td>
+                <td style="text-align: center; padding: 0.75rem 0.25rem;">${formatFooterCell(sumSat)}</td>
+                <td style="text-align: center; padding: 0.75rem 0.25rem;">${formatFooterCell(sumSun)}</td>
+                <td style="text-align: right; padding: 0.75rem 0.5rem;">
+                    <span style="display: inline-block; padding: 0.35rem 0.65rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem; background: ${weeklyBadgeBg}; color: ${weeklyColor}; border: ${weeklyBadgeBorder};">
+                        ${isWeeklyProf ? 'WEEKLY PROFIT' : 'WEEKLY LOSS'}: ₹${Math.abs(sumTotalNet).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </span>
+                </td>
+                <td></td>
+            </tr>
+        `;
+    }
 }
 
 window.shareWeeklyWhatsApp = function(customerId) {
