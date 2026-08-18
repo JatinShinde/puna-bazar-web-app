@@ -70,7 +70,7 @@ public class LedgerService {
                 BigDecimal totalAfterComm = totalSell.subtract(commCut);
                 BigDecimal afterPay = totalAfterComm.subtract(totalPay);
 
-                BigDecimal pagarVal = tx.getPagarAmount() != null ? tx.getPagarAmount() : (customer != null && customer.getPagar() != null ? customer.getPagar() : BigDecimal.ZERO);
+                BigDecimal pagarVal = tx.getPagarAmount() != null ? tx.getPagarAmount() : (customer != null && Boolean.TRUE.equals(customer.getPagarEnabled()) && customer.getPagar() != null ? customer.getPagar() : BigDecimal.ZERO);
                 BigDecimal farakVal = customer != null && customer.getFarak() != null ? customer.getFarak() : BigDecimal.ZERO;
 
                 BigDecimal runningNet = afterPay.subtract(pagarVal).subtract(farakVal);
