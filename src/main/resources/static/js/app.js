@@ -105,6 +105,43 @@ document.addEventListener('DOMContentLoaded', () => {
         checkIfMarketAlreadyUploaded();
     });
 
+function setTradeFormFieldsLocked(isLocked) {
+    const tradeForm = document.getElementById('tradeForm');
+    if (!tradeForm) return;
+
+    const inputs = tradeForm.querySelectorAll('input:not(#selectCustomer):not(#txDate), select:not(#selectCustomer)');
+    inputs.forEach(el => {
+        if (isLocked) {
+            el.disabled = true;
+            el.style.opacity = '0.45';
+            el.style.cursor = 'not-allowed';
+            el.style.pointerEvents = 'none';
+        } else {
+            if (!el.hasAttribute('readonly')) {
+                el.disabled = false;
+                el.style.opacity = '1';
+                el.style.cursor = 'default';
+                el.style.pointerEvents = 'auto';
+            }
+        }
+    });
+
+    const btnSave = document.getElementById('btnSaveTrade');
+    const btnShare = document.getElementById('btnShareTrade');
+    if (btnSave) {
+        btnSave.disabled = isLocked;
+        btnSave.style.opacity = isLocked ? '0.45' : '1';
+        btnSave.style.cursor = isLocked ? 'not-allowed' : 'pointer';
+        btnSave.style.pointerEvents = isLocked ? 'none' : 'auto';
+    }
+    if (btnShare) {
+        btnShare.disabled = isLocked;
+        btnShare.style.opacity = isLocked ? '0.45' : '1';
+        btnShare.style.cursor = isLocked ? 'not-allowed' : 'pointer';
+        btnShare.style.pointerEvents = isLocked ? 'none' : 'auto';
+    }
+}
+
 window.checkIfMarketAlreadyUploaded = async function() {
     const custId = document.getElementById('selectCustomer') ? document.getElementById('selectCustomer').value : '';
     const dateVal = document.getElementById('txDate') ? document.getElementById('txDate').value : '';
@@ -112,6 +149,7 @@ window.checkIfMarketAlreadyUploaded = async function() {
 
     if (!custId || !dateVal) {
         if (noticeEl) noticeEl.style.display = 'none';
+        setTradeFormFieldsLocked(false);
         return false;
     }
 
@@ -121,6 +159,7 @@ window.checkIfMarketAlreadyUploaded = async function() {
             const data = await res.json();
             if (data && data.exists) {
                 if (noticeEl) noticeEl.style.display = 'block';
+                setTradeFormFieldsLocked(true);
                 return true;
             }
         }
@@ -129,6 +168,7 @@ window.checkIfMarketAlreadyUploaded = async function() {
     }
 
     if (noticeEl) noticeEl.style.display = 'none';
+    setTradeFormFieldsLocked(false);
     return false;
 };
 
@@ -827,8 +867,15 @@ function calculateMathPreview() {
     }
 }
 
+let isSubmittingTrade = false;
+
 // 5. Handle Trade Form Actions (Save & Download vs Share to WhatsApp)
 window.processTradeAction = async function(actionType) {
+    if (isSubmittingTrade) {
+        console.warn('⚠️ Trade submission already in progress!');
+        return;
+    }
+
     const customerId = document.getElementById('selectCustomer') ? document.getElementById('selectCustomer').value : '';
     if (!customerId) {
         alert('⚠️ Please select a customer / trader first!');
@@ -840,6 +887,25 @@ window.processTradeAction = async function(actionType) {
     if (isAlreadyUploaded) {
         alert('⚠️ Market entry for this customer on this date has ALREADY been uploaded!\n\nChanges cannot be submitted from Daily Trade Entry & Math Engine. Please use the "✏️ Edit Full Receipt" button to make any changes.');
         return;
+    }
+
+    const btnSave = document.getElementById('btnSaveTrade');
+    const btnShare = document.getElementById('btnShareTrade');
+
+    isSubmittingTrade = true;
+    if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.style.opacity = '0.5';
+        btnSave.style.cursor = 'not-allowed';
+        btnSave.style.pointerEvents = 'none';
+        if (actionType === 'save') btnSave.textContent = '⏳ Saving...';
+    }
+    if (btnShare) {
+        btnShare.disabled = true;
+        btnShare.style.opacity = '0.5';
+        btnShare.style.cursor = 'not-allowed';
+        btnShare.style.pointerEvents = 'none';
+        if (actionType === 'share') btnShare.textContent = '⏳ Processing...';
     }
 
     let sellPo = 0;
@@ -929,6 +995,22 @@ window.processTradeAction = async function(actionType) {
         }
     } catch (err) {
         console.error('Error submitting trade:', err);
+    } finally {
+        isSubmittingTrade = false;
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.style.opacity = '1';
+            btnSave.style.cursor = 'pointer';
+            btnSave.style.pointerEvents = 'auto';
+            btnSave.textContent = '💾 Save';
+        }
+        if (btnShare) {
+            btnShare.disabled = false;
+            btnShare.style.opacity = '1';
+            btnShare.style.cursor = 'pointer';
+            btnShare.style.pointerEvents = 'auto';
+            btnShare.textContent = '📲 Share';
+        }
     }
 };
 
