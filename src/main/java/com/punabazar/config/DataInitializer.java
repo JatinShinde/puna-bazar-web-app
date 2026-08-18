@@ -51,19 +51,29 @@ public class DataInitializer implements CommandLineRunner {
             userRepository.save(admin);
         }
 
-        // 2. Seed Customers across Markets if empty
+        // 2. Seed Live Customers from JSON backup if database is empty
         if (customerRepository.count() == 0) {
-            Customer c1 = createCustomer("Ramesh Patil", "9822012345", "Solapur", "Solapur Market Yard", new BigDecimal("0.00"));
-            Customer c2 = createCustomer("Swargate Traders", "9881023456", "Pune", "Gultekdi Market", new BigDecimal("0.00"));
-            Customer c3 = createCustomer("Vashi APMC Trader", "9820045678", "Mumbai", "Vashi APMC", new BigDecimal("0.00"));
-            Customer c4 = createCustomer("Mahalaxmi Trading Co", "9822367890", "Kolhapur", "Kolhapur Bazaar", new BigDecimal("0.00"));
-            Customer c5 = createCustomer("Sangli Produce House", "9422478901", "Sangli", "Sangli Grain Market", new BigDecimal("0.00"));
-
-            // Seed Sample 2-Column Transaction for Solapur (Ramesh Patil)
-            seedTransaction(c1, LocalDate.now(), new BigDecimal("25000.00"), new BigDecimal("10000.00"), new BigDecimal("20000.00"), new BigDecimal("8000.00"), new BigDecimal("10.00"), "Solapur Market Trade");
-            
-            // Seed Sample Transaction for Pune (Swargate Traders)
-            seedTransaction(c2, LocalDate.now(), new BigDecimal("60000.00"), new BigDecimal("15000.00"), new BigDecimal("30000.00"), new BigDecimal("10000.00"), new BigDecimal("10.00"), "Pune Market Entry");
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                mapper.findAndRegisterModules();
+                org.springframework.core.io.ClassPathResource resource = new org.springframework.core.io.ClassPathResource("seed_customers.json");
+                if (resource.exists()) {
+                    try (java.io.InputStream inputStream = resource.getInputStream()) {
+                        java.util.List<Customer> seedCustomers = mapper.readValue(
+                            inputStream, 
+                            new com.fasterxml.jackson.core.type.TypeReference<java.util.List<Customer>>() {}
+                        );
+                        for (Customer c : seedCustomers) {
+                            c.setId(null);
+                            customerRepository.save(c);
+                        }
+                        System.out.println(">>> Successfully seeded " + seedCustomers.size() + " live customers into MySQL!");
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println(">>> Error seeding customers from JSON backup: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
