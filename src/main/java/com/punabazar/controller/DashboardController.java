@@ -17,7 +17,10 @@ public class DashboardController {
     }
 
     @GetMapping("/metrics")
-    public DashboardMetricsDTO getMetrics() {
-        return ledgerService.getDashboardMetrics();
+    public DashboardMetricsDTO getMetrics(
+            @org.springframework.web.bind.annotation.RequestParam(required = false)
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+            java.time.LocalDate date) {
+        return ledgerService.getDashboardMetricsForDate(date != null ? date : java.time.LocalDate.now());
     }
 }

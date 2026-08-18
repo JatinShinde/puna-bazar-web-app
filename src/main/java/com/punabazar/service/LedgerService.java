@@ -32,34 +32,20 @@ public class LedgerService {
     }
 
     public DashboardMetricsDTO getDashboardMetrics() {
-        LocalDate today = LocalDate.now();
+        return getDashboardMetricsForDate(LocalDate.now());
+    }
 
-        List<com.punabazar.model.Transaction> allTxs = transactionRepository.findAll();
-        List<Ledger> allLedgers = ledgerRepository.findAll();
+    public DashboardMetricsDTO getDashboardMetricsForDate(LocalDate date) {
+        LocalDate targetDate = date != null ? date : LocalDate.now();
+
         List<Customer> customers = customerRepository.findAll();
+        List<com.punabazar.model.Transaction> todayTxs = transactionRepository.findByTransactionDate(targetDate);
 
-        Double sellSum = transactionRepository.getTodayTotalSell(today);
-        Double poSum = transactionRepository.getTodayPoSell(today);
-        Double pcSum = transactionRepository.getTodayPcSell(today);
-        Double paySum = transactionRepository.getTodayTotalPayments(today);
-        Double commSum = commissionRepository.getTodayTotalCommission(today);
-
-        // If today's aggregate queries returned 0/null, fallback to sum of all recorded transactions
-        if ((sellSum == null || sellSum == 0) && (paySum == null || paySum == 0) && allTxs != null && !allTxs.isEmpty()) {
-            double totalSellTmp = 0, poSellTmp = 0, pcSellTmp = 0, payTmp = 0;
-            for (com.punabazar.model.Transaction tx : allTxs) {
-                if (tx.getTotalSell() != null) totalSellTmp += tx.getTotalSell().doubleValue();
-                if (tx.getSellPo() != null) poSellTmp += tx.getSellPo().doubleValue();
-                if (tx.getSellPcAmount() != null) pcSellTmp += tx.getSellPcAmount().doubleValue();
-                double pPo = tx.getPaymentPo() != null ? tx.getPaymentPo().doubleValue() : 0;
-                double pPc = tx.getPaymentPc() != null ? tx.getPaymentPc().doubleValue() : 0;
-                payTmp += (pPo + pPc);
-            }
-            sellSum = totalSellTmp;
-            poSum = poSellTmp;
-            pcSum = pcSellTmp;
-            paySum = payTmp;
-        }
+        Double sellSum = transactionRepository.getTodayTotalSell(targetDate);
+        Double poSum = transactionRepository.getTodayPoSell(targetDate);
+        Double pcSum = transactionRepository.getTodayPcSell(targetDate);
+        Double paySum = transactionRepository.getTodayTotalPayments(targetDate);
+        Double commSum = commissionRepository.getTodayTotalCommission(targetDate);
 
         BigDecimal todayTotalSell = sellSum != null ? BigDecimal.valueOf(sellSum) : BigDecimal.ZERO;
         BigDecimal todayPoSell = poSum != null ? BigDecimal.valueOf(poSum) : BigDecimal.ZERO;
@@ -67,11 +53,10 @@ public class LedgerService {
         BigDecimal todayTotalPayment = paySum != null ? BigDecimal.valueOf(paySum) : BigDecimal.ZERO;
         BigDecimal todayTotalCommission = commSum != null ? BigDecimal.valueOf(commSum) : BigDecimal.ZERO;
 
-        List<com.punabazar.model.Transaction> targetTxs = (allTxs != null && !allTxs.isEmpty()) ? allTxs : transactionRepository.findByTransactionDate(today);
         BigDecimal todayNetSum = BigDecimal.ZERO;
 
-        if (targetTxs != null && !targetTxs.isEmpty()) {
-            for (com.punabazar.model.Transaction tx : targetTxs) {
+        if (todayTxs != null && !todayTxs.isEmpty()) {
+            for (com.punabazar.model.Transaction tx : todayTxs) {
                 Customer customer = tx.getCustomer();
                 BigDecimal totalSell = tx.getTotalSell() != null ? tx.getTotalSell() : BigDecimal.ZERO;
                 BigDecimal paymentPo = tx.getPaymentPo() != null ? tx.getPaymentPo() : BigDecimal.ZERO;
@@ -109,8 +94,6 @@ public class LedgerService {
                 BigDecimal txTodayNet = runningNet.subtract(shareAmount);
                 todayNetSum = todayNetSum.add(txTodayNet);
             }
-        } else {
-            todayNetSum = todayTotalSell.subtract(todayTotalCommission).subtract(todayTotalPayment);
         }
 
         String profitLossStatus = todayNetSum.compareTo(BigDecimal.ZERO) >= 0 ? "PROFIT" : "LOSS";
@@ -121,7 +104,8 @@ public class LedgerService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add) : BigDecimal.ZERO;
 
         List<String> markets = customerRepository.findDistinctCities();
-
+        List<com.punabazar.model.Transaction> allTxs = transactionRepository.findAll();
+        List<Ledger> allLedgers = ledgerRepository.findAll();
         java.util.Set<Long> activeCustomerIdsWithReceipts = new java.util.HashSet<>();
 
         if (allTxs != null) {
