@@ -132,6 +132,12 @@ public class Customer {
     public Boolean getShare30ProfitOnly() { return share30ProfitOnly != null ? share30ProfitOnly : false; }
     public void setShare30ProfitOnly(Boolean share30ProfitOnly) { this.share30ProfitOnly = share30ProfitOnly; }
 
+    @Transient
+    private BigDecimal todayNet = BigDecimal.ZERO;
+
+    public BigDecimal getTodayNet() { return todayNet; }
+    public void setTodayNet(BigDecimal todayNet) { this.todayNet = todayNet; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

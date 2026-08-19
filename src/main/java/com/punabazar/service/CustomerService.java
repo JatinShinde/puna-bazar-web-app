@@ -3,6 +3,7 @@ package com.punabazar.service;
 import com.punabazar.dto.CustomerRequestDTO;
 import com.punabazar.dto.TransactionRequestDTO;
 import com.punabazar.model.Customer;
+import com.punabazar.model.Transaction;
 import com.punabazar.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,23 +37,52 @@ public class CustomerService {
     }
 
     public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
+        List<Customer> list = customerRepository.findAll();
+        populateTodayNet(list);
+        return list;
     }
 
     public Customer getCustomerById(Long id) {
-        return customerRepository.findById(id)
+        Customer c = customerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Customer not found: " + id));
+        populateTodayNet(java.util.Collections.singletonList(c));
+        return c;
     }
 
     public List<Customer> searchCustomers(String query) {
+        List<Customer> list;
         if (query == null || query.trim().isEmpty()) {
-            return customerRepository.findAll();
+            list = customerRepository.findAll();
+        } else {
+            list = customerRepository.searchCustomers(query.trim());
         }
-        return customerRepository.searchCustomers(query.trim());
+        populateTodayNet(list);
+        return list;
     }
 
     public List<Customer> getCustomersByCity(String city) {
-        return customerRepository.findByCityIgnoreCase(city);
+        List<Customer> list = customerRepository.findByCityIgnoreCase(city);
+        populateTodayNet(list);
+        return list;
+    }
+
+    private void populateTodayNet(List<Customer> list) {
+        if (list == null || list.isEmpty()) return;
+        LocalDate today = LocalDate.now();
+        for (Customer c : list) {
+            List<Transaction> txs = transactionRepository.findByCustomerIdOrderByTransactionDateDesc(c.getId());
+            BigDecimal todayNetVal = BigDecimal.ZERO;
+            if (txs != null) {
+                for (Transaction tx : txs) {
+                    LocalDate txDate = tx.getTransactionDate() != null ? tx.getTransactionDate() :
+                            (tx.getCreatedAt() != null ? tx.getCreatedAt().toLocalDate() : null);
+                    if (today.equals(txDate)) {
+                        todayNetVal = todayNetVal.add(WhatsAppService.calculateReceiptTodayNet(c, tx, true, false));
+                    }
+                }
+            }
+            c.setTodayNet(todayNetVal);
+        }
     }
 
     public List<String> getDistinctMarkets() {

@@ -422,8 +422,9 @@ function renderCustomerTable(list) {
     }
 
     list.forEach(c => {
-        const tr = document.createElement('tr');
-        const balColor = c.previousBalance > 0 ? '#fca5a5' : '#34d399';
+        const todayNet = c.todayNet != null ? c.todayNet : 0;
+        const balColor = todayNet < 0 ? '#f87171' : '#34d399';
+        const formattedNet = (todayNet < 0 ? '₹-' + Math.abs(todayNet).toFixed(2) : '₹' + todayNet.toFixed(2));
         const cityDisplay = c.city || c.marketZone || 'General';
         const mobileDisplay = c.mobileNumber && c.mobileNumber.trim() ? `📱 ${escapeHtml(c.mobileNumber)}` : '-';
         const subInfo = (c.marketZone || c.city) ? `${escapeHtml(c.marketZone || c.city)} • (${escapeHtml(c.marketCodes || 'PO,PC')})` : `(${escapeHtml(c.marketCodes || 'PO,PC')})`;
@@ -435,7 +436,7 @@ function renderCustomerTable(list) {
             </td>
             <td><span class="chip" style="margin: 0;">${escapeHtml(cityDisplay)}</span></td>
             <td>${mobileDisplay}</td>
-            <td style="font-weight: 800; color: ${balColor};">₹${c.previousBalance.toFixed(2)}</td>
+            <td style="font-weight: 800; color: ${balColor};">${formattedNet}</td>
             <td>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <button onclick="triggerWhatsApp(${c.id})" class="btn-whatsapp">
