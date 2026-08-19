@@ -413,7 +413,8 @@ function populateCustomerDropdown(list) {
     list.forEach(c => {
         const opt = document.createElement('option');
         opt.value = c.id;
-        opt.textContent = `${c.name} (${c.city})`;
+        const cityTag = c.city || c.marketZone || '';
+        opt.textContent = cityTag ? `${c.name} (${cityTag})` : c.name;
         select.appendChild(opt);
     });
 
@@ -430,6 +431,7 @@ function renderCustomerTable(list) {
     }
 
     list.forEach(c => {
+        const tr = document.createElement('tr');
         const todayNet = c.todayNet != null ? c.todayNet : 0;
         const balColor = todayNet < 0 ? '#f87171' : '#34d399';
         const formattedNet = (todayNet < 0 ? '₹-' + Math.abs(todayNet).toFixed(2) : '₹' + todayNet.toFixed(2));
