@@ -27,4 +27,9 @@ public class WhatsAppController {
                                                 @RequestParam(required = false) java.math.BigDecimal dene) {
         return whatsappService.generateStatement(customerId, style, sellPo, sellPc, payPo, payPc, farak, pagar, yene, dene);
     }
+
+    @GetMapping("/today-statements")
+    public java.util.List<WhatsAppStatementDTO> getTodayStatements() {
+        return whatsappService.getTodayStatements();
+    }
 }

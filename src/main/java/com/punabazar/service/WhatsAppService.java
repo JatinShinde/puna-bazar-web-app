@@ -648,6 +648,29 @@ public class WhatsAppService {
         return df.format(val.abs());
     }
 
+    public List<WhatsAppStatementDTO> getTodayStatements() {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        List<Transaction> todayTxs = transactionRepository.findByTransactionDate(today);
+        List<WhatsAppStatementDTO> list = new java.util.ArrayList<>();
+        java.util.Set<Long> processedCustIds = new java.util.HashSet<>();
+
+        if (todayTxs != null) {
+            for (Transaction tx : todayTxs) {
+                if (tx != null && tx.getCustomer() != null && tx.getCustomer().getId() != null) {
+                    Long cId = tx.getCustomer().getId();
+                    if (!processedCustIds.contains(cId)) {
+                        processedCustIds.add(cId);
+                        WhatsAppStatementDTO dto = generateStatement(cId);
+                        if (dto != null) {
+                            list.add(dto);
+                        }
+                    }
+                }
+            }
+        }
+        return list;
+    }
+
     public String getDefaultTemplate() {
         return "{centeredCity}\n\n" +
                "             SELL    PAYMENT\n" +

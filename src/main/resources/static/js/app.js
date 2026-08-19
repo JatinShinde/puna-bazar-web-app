@@ -1495,6 +1495,14 @@ function parseMessageToVisualReceipt(rawMsg, customer, balVal) {
     `;
 }
 
+function formatWhatsAppMessageToHtml(rawMsg) {
+    if (!rawMsg) return '';
+    let html = escapeHtml(rawMsg);
+    html = html.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+    html = html.replace(/\n/g, '<br>');
+    return html;
+}
+
 async function populateAndRenderReceiptsDropdown() {
     const listContainer = document.getElementById('receiptsDropdownList');
     const countBadge = document.getElementById('receiptsDropdownCount');
@@ -1506,103 +1514,67 @@ async function populateAndRenderReceiptsDropdown() {
         </div>
     `;
 
-    let customersList = customersData || [];
-    if (!customersList || customersList.length === 0) {
-        try {
-            const res = await fetch('/api/customers');
-            if (res.ok) {
-                customersList = await res.json();
-            }
-        } catch (e) {}
-    }
+    try {
+        const res = await fetch('/api/whatsapp/today-statements');
+        if (!res.ok) throw new Error('Failed to fetch today statements');
+        const statements = await res.json();
 
-    let activeCustomers = [];
-    const seenCustIds = new Set();
+        if (countBadge) countBadge.textContent = statements ? statements.length : 0;
+        if (document.getElementById('kpiGeneratedReceipts')) {
+            document.getElementById('kpiGeneratedReceipts').textContent = statements ? statements.length : 0;
+        }
 
-    if (customersList && Array.isArray(customersList)) {
-        customersList.forEach(c => {
-            const hasActivity = (c.previousBalance && c.previousBalance !== 0) ||
-                                (c.yene && c.yene !== 0) ||
-                                (c.dene && c.dene !== 0) ||
-                                (c.magilBaki && c.magilBaki !== 0);
-            if (hasActivity && !seenCustIds.has(c.id)) {
-                seenCustIds.add(c.id);
-                activeCustomers.push(c);
-            }
+        if (!statements || statements.length === 0) {
+            listContainer.innerHTML = `
+                <div style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 0.75rem 0;">
+                    No receipts generated yet today.
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        statements.forEach((stmt, idx) => {
+            const rawMessage = stmt.formattedMessage || '';
+            const visualHtml = formatWhatsAppMessageToHtml(rawMessage);
+
+            html += `
+                <div style="background: rgba(15, 23, 42, 0.95); border: 1.5px solid rgba(56, 189, 248, 0.35); border-radius: 0.85rem; padding: 0.75rem; margin-bottom: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                    <!-- Market Name Header -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 0.4rem;">
+                        <div style="display: flex; align-items: center; gap: 0.55rem; overflow: hidden;">
+                            <span style="background: #38bdf8; color: #0f172a; font-weight: 900; font-size: 0.75rem; min-width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                ${idx + 1}
+                            </span>
+                            <div style="overflow: hidden;">
+                                <div style="font-weight: 800; color: #f8fafc; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    ${escapeHtml(stmt.customerName)}
+                                </div>
+                                <div style="font-size: 0.7rem; color: #94a3b8;">
+                                    ${escapeHtml(stmt.city || 'General Market')}
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="triggerWhatsAppFromDropdown(${stmt.customerId})" class="btn-whatsapp" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; cursor: pointer;">
+                            📲 Send
+                        </button>
+                    </div>
+
+                    <!-- 100% EXACT WHATSAPP RECEIPT PREVIEW -->
+                    <div style="background: #090d16; border: 1.5px solid rgba(56, 189, 248, 0.4); border-radius: 0.75rem; padding: 0.75rem; color: #f8fafc; font-family: 'Courier New', Courier, monospace; font-size: 0.82rem; line-height: 1.45;">
+                        ${visualHtml}
+                    </div>
+                </div>
+            `;
         });
-    }
 
-    if (activeCustomers.length === 0 && customersList && Array.isArray(customersList)) {
-        customersList.forEach(c => {
-            if (!seenCustIds.has(c.id)) {
-                seenCustIds.add(c.id);
-                activeCustomers.push(c);
-            }
-        });
-    }
-
-    if (countBadge) countBadge.textContent = activeCustomers.length;
-
-    if (activeCustomers.length === 0) {
+        listContainer.innerHTML = html;
+    } catch (e) {
         listContainer.innerHTML = `
             <div style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 0.75rem 0;">
                 No receipts generated yet today.
             </div>
         `;
-        return;
-    }
-
-    // Fetch generated statements for all active customers in parallel
-    const statements = await Promise.all(
-        activeCustomers.map(c => 
-            fetch(`/api/whatsapp/generate/${c.id}`)
-                .then(r => r.ok ? r.json() : null)
-                .catch(() => null)
-        )
-    );
-
-    let html = '';
-    activeCustomers.forEach((c, idx) => {
-        const stmt = statements[idx];
-        const rawMessage = stmt && stmt.formattedMessage ? stmt.formattedMessage : '';
-        const cityStr = c.city || c.marketZone || 'General Market';
-        const balVal = c.previousBalance != null ? c.previousBalance : 0;
-        const balColor = balVal >= 0 ? '#34d399' : '#f87171';
-
-        const visualReceiptHtml = parseMessageToVisualReceipt(rawMessage, c, balVal);
-
-        html += `
-            <div style="background: rgba(15, 23, 42, 0.95); border: 1.5px solid rgba(56, 189, 248, 0.35); border-radius: 0.85rem; padding: 0.75rem; margin-bottom: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-                <!-- Market Name Header -->
-                <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 0.4rem;">
-                    <div style="display: flex; align-items: center; gap: 0.55rem; overflow: hidden;">
-                        <span style="background: #38bdf8; color: #0f172a; font-weight: 900; font-size: 0.75rem; min-width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            ${idx + 1}
-                        </span>
-                        <div style="overflow: hidden;">
-                            <div style="font-weight: 800; color: #f8fafc; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                ${escapeHtml(c.name)}
-                            </div>
-                            <div style="font-size: 0.7rem; color: #94a3b8;">
-                                ${escapeHtml(cityStr)} • (${escapeHtml(c.marketCodes || 'PO,PC')})
-                            </div>
-                        </div>
-                    </div>
-                    <span style="font-weight: 800; color: ${balColor}; font-size: 0.88rem; flex-shrink: 0; background: rgba(15, 23, 42, 0.8); padding: 0.2rem 0.5rem; border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.08);">
-                        ₹${balVal.toFixed(2)}
-                    </span>
-                </div>
-
-                <!-- EXACT VISUAL RECEIPT CARD BELOW MARKET NAME -->
-                ${visualReceiptHtml}
-
-                <!-- Action Button -->
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding-top: 0.2rem;">
-                    <button onclick="triggerWhatsAppFromDropdown(${c.id})" style="background: #10b981; color: #ffffff; border: none; padding: 0.4rem 0.75rem; border-radius: 0.5rem; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 0.35rem; width: 100%; justify-content: center;">
-                        📲 Send WhatsApp Statement
-                    </button>
-                </div>
-            </div>
         `;
     });
 

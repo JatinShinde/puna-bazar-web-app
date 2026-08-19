@@ -85,10 +85,12 @@ public class LedgerService {
         List<String> markets = customerRepository.findDistinctCities();
         Long totalCustomerCount = (customers != null) ? (long) customers.size() : 0L;
 
+        java.util.Set<Long> todayCustomerSet = new java.util.HashSet<>();
         java.util.Set<String> receiptMarketSet = new java.util.HashSet<>();
         if (todayTxs != null) {
             for (com.punabazar.model.Transaction tx : todayTxs) {
-                if (tx.getCustomer() != null) {
+                if (tx.getCustomer() != null && tx.getCustomer().getId() != null) {
+                    todayCustomerSet.add(tx.getCustomer().getId());
                     String mCity = tx.getCustomer().getCity() != null && !tx.getCustomer().getCity().trim().isEmpty()
                             ? tx.getCustomer().getCity().trim()
                             : (tx.getCustomer().getMarketZone() != null ? tx.getCustomer().getMarketZone().trim() : "General");
@@ -96,7 +98,7 @@ public class LedgerService {
                 }
             }
         }
-        Long generatedReceiptCount = (long) receiptMarketSet.size();
+        Long generatedReceiptCount = (long) todayCustomerSet.size();
         List<String> generatedReceiptMarkets = new java.util.ArrayList<>(receiptMarketSet);
         java.util.Collections.sort(generatedReceiptMarkets);
 
