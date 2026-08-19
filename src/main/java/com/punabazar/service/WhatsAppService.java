@@ -34,10 +34,14 @@ public class WhatsAppService {
     }
 
     public static BigDecimal calculateReceiptTodayNet(Customer customer, Transaction tx) {
-        return calculateReceiptTodayNet(customer, tx, true);
+        return calculateReceiptTodayNet(customer, tx, true, false);
     }
 
     public static BigDecimal calculateReceiptTodayNet(Customer customer, Transaction tx, boolean includeFarak) {
+        return calculateReceiptTodayNet(customer, tx, includeFarak, false);
+    }
+
+    public static BigDecimal calculateReceiptTodayNet(Customer customer, Transaction tx, boolean includeFarak, boolean includeMagilBaki) {
         if (tx == null) return BigDecimal.ZERO;
 
         BigDecimal sellPoVal = tx.getSellPo() != null ? tx.getSellPo() : BigDecimal.ZERO;
@@ -93,7 +97,12 @@ public class WhatsAppService {
             }
         }
 
-        return afterFarak.subtract(shareAmount);
+        BigDecimal todayNet = afterFarak.subtract(shareAmount);
+        if (includeMagilBaki) {
+            BigDecimal txMagil = tx.getMagilBaki() != null ? tx.getMagilBaki() : BigDecimal.ZERO;
+            todayNet = todayNet.add(txMagil);
+        }
+        return todayNet;
     }
 
     public WhatsAppStatementDTO generateStatement(Long customerId) {
