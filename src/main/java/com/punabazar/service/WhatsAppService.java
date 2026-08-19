@@ -79,7 +79,7 @@ public class WhatsAppService {
         if (includeFarak && customer != null && customer.getFarak() != null && customer.getFarak().compareTo(BigDecimal.ZERO) != 0) {
             farakVal = customer.getFarak();
         }
-        BigDecimal afterFarak = runningNet.subtract(farakVal);
+        BigDecimal afterFarak = runningNet.add(farakVal);
 
         BigDecimal shareRate = customer != null && customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00");
         boolean is30ProfitOnly = customer != null && Boolean.TRUE.equals(customer.getShare30ProfitOnly());
