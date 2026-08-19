@@ -1575,10 +1575,7 @@ async function populateAndRenderReceiptsDropdown() {
                 No receipts generated yet today.
             </div>
         `;
-        `;
-    });
-
-    listContainer.innerHTML = html;
+    }
 }
 
 // Open and Render Registered Markets List Modal
