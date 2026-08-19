@@ -53,30 +53,27 @@
                 </div>
             </div>
 
-            <div class="kpi-card" style="flex-direction: column; align-items: flex-start; justify-content: center; gap: 0.4rem; padding: 0.85rem;">
-                <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.1rem;">
-                    <span>✂️ TODAY'S COMMISSION & DEDUCTIONS</span>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.35rem; width: 100%;">
+            <div class="kpi-card" style="padding: 0.5rem; justify-content: center; align-items: center;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.35rem; width: 100%; height: 100%;">
                     <!-- Small Box 1: Commission -->
-                    <div style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.25); border-radius: 0.5rem; padding: 0.35rem 0.2rem; text-align: center;">
-                        <div style="font-size: 0.6rem; color: #f472b6; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;">COMM</div>
-                        <div style="font-size: 0.75rem; color: #f472b6; font-weight: 800; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="kpiTotalCommission">₹0.00</div>
+                    <div style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.25); border-radius: 0.5rem; padding: 0.4rem 0.3rem; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <div style="font-size: 0.625rem; color: #f472b6; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;">COMM</div>
+                        <div style="font-size: 0.8125rem; color: #f472b6; font-weight: 800; margin-top: 0.1rem;" id="kpiTotalCommission">₹0.00</div>
                     </div>
                     <!-- Small Box 2: MP -->
-                    <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 0.5rem; padding: 0.35rem 0.2rem; text-align: center;">
-                        <div style="font-size: 0.6rem; color: #fbbf24; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;">MP</div>
-                        <div style="font-size: 0.75rem; color: #fbbf24; font-weight: 800; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="kpiTotalMissPayment">₹0.00</div>
+                    <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 0.5rem; padding: 0.4rem 0.3rem; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <div style="font-size: 0.625rem; color: #fbbf24; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;">MP</div>
+                        <div style="font-size: 0.8125rem; color: #fbbf24; font-weight: 800; margin-top: 0.1rem;" id="kpiTotalMissPayment">₹0.00</div>
                     </div>
                     <!-- Small Box 3: PAGAR -->
-                    <div style="background: rgba(252, 165, 165, 0.1); border: 1px solid rgba(252, 165, 165, 0.25); border-radius: 0.5rem; padding: 0.35rem 0.2rem; text-align: center;">
-                        <div style="font-size: 0.6rem; color: #fca5a5; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;">PAGAR</div>
-                        <div style="font-size: 0.75rem; color: #fca5a5; font-weight: 800; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="kpiTotalPagar">₹0.00</div>
+                    <div style="background: rgba(252, 165, 165, 0.1); border: 1px solid rgba(252, 165, 165, 0.25); border-radius: 0.5rem; padding: 0.4rem 0.3rem; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <div style="font-size: 0.625rem; color: #fca5a5; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;">PAGAR</div>
+                        <div style="font-size: 0.8125rem; color: #fca5a5; font-weight: 800; margin-top: 0.1rem;" id="kpiTotalPagar">₹0.00</div>
                     </div>
                     <!-- Small Box 4: SHARE -->
-                    <div style="background: rgba(192, 132, 252, 0.1); border: 1px solid rgba(192, 132, 252, 0.25); border-radius: 0.5rem; padding: 0.35rem 0.2rem; text-align: center;">
-                        <div style="font-size: 0.6rem; color: #c084fc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;">SHARE</div>
-                        <div style="font-size: 0.75rem; color: #c084fc; font-weight: 800; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="kpiTotal30Share">₹0.00</div>
+                    <div style="background: rgba(192, 132, 252, 0.1); border: 1px solid rgba(192, 132, 252, 0.25); border-radius: 0.5rem; padding: 0.4rem 0.3rem; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <div style="font-size: 0.625rem; color: #c084fc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;">SHARE</div>
+                        <div style="font-size: 0.8125rem; color: #c084fc; font-weight: 800; margin-top: 0.1rem;" id="kpiTotal30Share">₹0.00</div>
                     </div>
                 </div>
             </div>
