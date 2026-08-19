@@ -21,17 +21,12 @@ public class CustomerController {
     @GetMapping
     public List<Customer> getAll(@RequestParam(required = false) String search,
                                  @RequestParam(required = false) String city) {
-        try {
-            if (search != null && !search.trim().isEmpty()) {
-                return customerService.searchCustomers(search);
-            } else if (city != null && !city.trim().isEmpty()) {
-                return customerService.getCustomersByCity(city);
-            }
-            return customerService.getAllCustomers();
-        } catch (Exception ex) {
-            System.err.println("Error fetching customer list: " + ex.getMessage());
-            return java.util.Collections.emptyList();
+        if (search != null && !search.trim().isEmpty()) {
+            return customerService.searchCustomers(search);
+        } else if (city != null && !city.trim().isEmpty()) {
+            return customerService.getCustomersByCity(city);
         }
+        return customerService.getAllCustomers();
     }
 
     @GetMapping("/{id}")
