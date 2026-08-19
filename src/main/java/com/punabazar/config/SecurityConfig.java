@@ -61,8 +61,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/index.html", "/login.html", "/api/**", "/css/**", "/js/**", "/images/**", "/h2-console/**", "/favicon.ico").permitAll()
-                .anyRequest().authenticated()
+                .requestMatchers("/**").permitAll()
             )
             .formLogin(form -> form
                 .loginPage("/login.html")
