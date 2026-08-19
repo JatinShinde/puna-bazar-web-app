@@ -60,18 +60,25 @@ public class LedgerService {
 
         if (todayTxs != null && !todayTxs.isEmpty()) {
             for (com.punabazar.model.Transaction tx : todayTxs) {
-                Customer customer = tx.getCustomer();
-                if (tx.getFarak() != null) {
-                    todayTotalMissPayment = todayTotalMissPayment.add(tx.getFarak());
-                }
-                if (tx.getPagarAmount() != null) {
-                    todayTotalPagar = todayTotalPagar.add(tx.getPagarAmount());
-                }
-                BigDecimal shareAmt = WhatsAppService.calculateShareAmountForTransaction(customer, tx);
-                todayTotal30Share = todayTotal30Share.add(shareAmt);
+                if (tx == null) continue;
+                try {
+                    Customer customer = tx.getCustomer();
+                    if (tx.getFarak() != null) {
+                        todayTotalMissPayment = todayTotalMissPayment.add(tx.getFarak());
+                    }
+                    if (tx.getPagarAmount() != null) {
+                        todayTotalPagar = todayTotalPagar.add(tx.getPagarAmount());
+                    }
+                    if (customer != null) {
+                        BigDecimal shareAmt = WhatsAppService.calculateShareAmountForTransaction(customer, tx);
+                        todayTotal30Share = todayTotal30Share.add(shareAmt);
 
-                BigDecimal txTodayNet = WhatsAppService.calculateReceiptTodayNet(customer, tx);
-                todayNetSum = todayNetSum.add(txTodayNet);
+                        BigDecimal txTodayNet = WhatsAppService.calculateReceiptTodayNet(customer, tx);
+                        todayNetSum = todayNetSum.add(txTodayNet);
+                    }
+                } catch (Exception ex) {
+                    // Safe fallback for corrupted transaction record
+                }
             }
         }
 
