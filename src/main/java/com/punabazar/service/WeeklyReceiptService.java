@@ -66,9 +66,7 @@ public class WeeklyReceiptService {
             BigDecimal sat = dayNetMap.get(DayOfWeek.SATURDAY);
             BigDecimal sun = dayNetMap.get(DayOfWeek.SUNDAY);
 
-            BigDecimal weeklySubtotal = mon.add(tue).add(wed).add(thu).add(fri).add(sat).add(sun);
-            BigDecimal farakVal = (c.getFarak() != null && c.getFarak().compareTo(BigDecimal.ZERO) != 0) ? c.getFarak() : BigDecimal.ZERO;
-            BigDecimal weeklyTotal = weeklySubtotal.subtract(farakVal);
+            BigDecimal weeklyTotal = mon.add(tue).add(wed).add(thu).add(fri).add(sat).add(sun);
             String status = weeklyTotal.compareTo(BigDecimal.ZERO) >= 0 ? "YENE" : "DENE";
 
             StringBuilder sb = new StringBuilder();
@@ -87,12 +85,6 @@ public class WeeklyReceiptService {
             sb.append("Sat :-               ").append(formatDayAmount(sat, fmt)).append("\n");
             sb.append("Sun :-               ").append(formatDayAmount(sun, fmt)).append("\n");
             sb.append("----------------------------------\n");
-
-            if (farakVal.compareTo(BigDecimal.ZERO) != 0) {
-                sb.append("*MISS PAYMENT :-*     ").append(fmt.format(farakVal.abs())).append("\n");
-                sb.append("----------------------------------\n");
-            }
-
             sb.append("*WEEKLY TOTAL :-*     *").append(fmt.format(weeklyTotal.abs())).append(" ").append(status.toLowerCase()).append("*\n");
             sb.append("==================================\n");
             sb.append("TOTAL BALANCE DUE ").append(fmt.format(weeklyTotal.abs())).append(" ").append(status.toLowerCase());
@@ -114,7 +106,7 @@ public class WeeklyReceiptService {
     }
 
     private BigDecimal computeTransactionDailyNet(Customer c, Transaction tx) {
-        return WhatsAppService.calculateReceiptTodayNet(c, tx, false, true);
+        return WhatsAppService.calculateReceiptTodayNet(c, tx, true, true);
     }
 
     private String formatDayAmount(BigDecimal val, DecimalFormat fmt) {
