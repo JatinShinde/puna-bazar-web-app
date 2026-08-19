@@ -771,6 +771,9 @@ window.editCustomer = function(id) {
     if (document.getElementById('custShareRateContainer')) {
         document.getElementById('custShareRateContainer').style.display = isShareEnabled ? 'block' : 'none';
     }
+    if (document.getElementById('custFarak')) {
+        document.getElementById('custFarak').value = customer.farak != null ? customer.farak : 0.0;
+    }
 
     openModal('customerModal');
 };
@@ -1045,6 +1048,8 @@ async function handleNewCustomerSubmit(e) {
     const customShareRate = document.getElementById('custShareRateVal') ? (parseFloat(document.getElementById('custShareRateVal').value) || 40.0) : 40.0;
     const shareRateVal = isShare4060Checked ? customShareRate : 100.0;
 
+    const farakVal = document.getElementById('custFarak') ? (parseFloat(document.getElementById('custFarak').value) || 0) : 0;
+
     const payload = {
         name: nameVal,
         mobileNumber: '',
@@ -1058,7 +1063,7 @@ async function handleNewCustomerSubmit(e) {
         pagarEnabled: isPagarEnabledChecked,
         yene: 0,
         dene: 0,
-        farak: 0,
+        farak: farakVal,
         marketCodes: 'PO,PC'
     };
 
