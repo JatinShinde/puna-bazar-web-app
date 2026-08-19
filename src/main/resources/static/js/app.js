@@ -21,38 +21,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const localDd = String(localDate.getDate()).padStart(2, '0');
     const todayStr = `${localYyyy}-${localMm}-${localDd}`;
 
-    const globalPicker = document.getElementById('globalDatePicker');
     const txPicker = document.getElementById('txDate');
-
-    if (globalPicker) {
-        globalPicker.value = todayStr;
-        const onGlobalDateChange = () => {
-            const selectedDate = globalPicker.value;
-            if (txPicker) txPicker.value = selectedDate;
-            loadDashboardMetrics(selectedDate);
-            populateAndRenderReceiptsDropdown(selectedDate);
-        };
-        globalPicker.addEventListener('change', onGlobalDateChange);
-        globalPicker.addEventListener('input', onGlobalDateChange);
-    }
-
     if (txPicker) {
         txPicker.value = todayStr;
-        const onTxDateChange = () => {
-            const selectedDate = txPicker.value;
-            if (globalPicker) globalPicker.value = selectedDate;
+        txPicker.addEventListener('change', () => {
             checkIfMarketAlreadyUploaded();
-            loadDashboardMetrics(selectedDate);
-            populateAndRenderReceiptsDropdown(selectedDate);
-        };
-        txPicker.addEventListener('change', onTxDateChange);
-        txPicker.addEventListener('input', onTxDateChange);
+        });
     }
 
-    // Initial Loaders
     checkAuth();
     loadDashboardMetrics();
-    loadCustomers();
+    loadCustomerDropdownOptions();
+    loadActiveCustomerLedgers();
 
     // Event Listeners for Live Math Calculator Engine
     ['tradeReceiptStyle', 'commPercent', 'shareRatePercent', 'tradeYene', 'tradeDene', 'farakAmount', 'pagarAmount'].forEach(id => {
@@ -361,14 +341,9 @@ async function checkAuth() {
     }
 }
 
-async function loadDashboardMetrics(targetDate = null) {
+async function loadDashboardMetrics() {
     try {
-        const pickerVal = document.getElementById('globalDatePicker')?.value;
-        const dateToFetch = targetDate || pickerVal || '';
-        let url = '/api/dashboard/metrics';
-        if (dateToFetch) url += '?date=' + encodeURIComponent(dateToFetch);
-
-        const res = await fetch(url);
+        const res = await fetch('/api/dashboard/metrics');
         const data = await res.json();
         latestDashboardData = data;
 
@@ -1541,7 +1516,7 @@ function formatWhatsAppMessageToHtml(rawMsg) {
     return html;
 }
 
-async function populateAndRenderReceiptsDropdown(targetDate = null) {
+async function populateAndRenderReceiptsDropdown() {
     const listContainer = document.getElementById('receiptsDropdownList');
     const countBadge = document.getElementById('receiptsDropdownCount');
     if (!listContainer) return;
@@ -1553,12 +1528,7 @@ async function populateAndRenderReceiptsDropdown(targetDate = null) {
     `;
 
     try {
-        const pickerVal = document.getElementById('globalDatePicker')?.value;
-        const dateToFetch = targetDate || pickerVal || '';
-        let url = '/api/whatsapp/today-statements';
-        if (dateToFetch) url += '?date=' + encodeURIComponent(dateToFetch);
-
-        const res = await fetch(url);
+        const res = await fetch('/api/whatsapp/today-statements');
         if (!res.ok) throw new Error('Failed to fetch today statements');
         const statements = await res.json();
 

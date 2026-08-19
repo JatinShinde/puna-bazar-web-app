@@ -29,10 +29,7 @@ public class WhatsAppController {
     }
 
     @GetMapping("/today-statements")
-    public java.util.List<WhatsAppStatementDTO> getTodayStatements(
-            @RequestParam(required = false)
-            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
-            java.time.LocalDate date) {
-        return whatsappService.getTodayStatements(date);
+    public java.util.List<WhatsAppStatementDTO> getTodayStatements() {
+        return whatsappService.getTodayStatements();
     }
 }
