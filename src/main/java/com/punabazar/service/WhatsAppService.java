@@ -173,14 +173,26 @@ public class WhatsAppService {
                                                 BigDecimal payPoParam, BigDecimal payPcParam,
                                                 BigDecimal farakParam, BigDecimal pagarParam,
                                                 BigDecimal yeneParam, BigDecimal deneParam) {
+        return generateStatement(customerId, styleOverride, sellPoParam, sellPcParam, payPoParam, payPcParam, farakParam, pagarParam, yeneParam, deneParam, null);
+    }
+
+    public WhatsAppStatementDTO generateStatement(Long customerId, String styleOverride,
+                                                BigDecimal sellPoParam, BigDecimal sellPcParam,
+                                                BigDecimal payPoParam, BigDecimal payPcParam,
+                                                BigDecimal farakParam, BigDecimal pagarParam,
+                                                BigDecimal yeneParam, BigDecimal deneParam,
+                                                Transaction targetTx) {
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
 
         List<Ledger> ledgers = ledgerRepository.findByCustomerIdOrderByEntryDateDesc(customerId);
         Ledger latestLedger = ledgers.isEmpty() ? null : ledgers.get(0);
 
-        List<Transaction> txs = transactionRepository.findByCustomerIdOrderByTransactionDateDesc(customerId);
-        Transaction latestTx = txs.isEmpty() ? null : txs.get(0);
+        Transaction latestTx = targetTx;
+        if (latestTx == null) {
+            List<Transaction> txs = transactionRepository.findByCustomerIdOrderByTransactionDateDesc(customerId);
+            latestTx = txs.isEmpty() ? null : txs.get(0);
+        }
 
         String rawCity = customer.getCity() != null && !customer.getCity().trim().isEmpty() 
                 ? customer.getCity().trim().toUpperCase() 
@@ -669,7 +681,7 @@ public class WhatsAppService {
                     if (!processedCustIds.contains(cId)) {
                         processedCustIds.add(cId);
                         try {
-                            WhatsAppStatementDTO dto = generateStatement(cId);
+                            WhatsAppStatementDTO dto = generateStatement(cId, null, null, null, null, null, null, null, null, null, tx);
                             if (dto != null) {
                                 list.add(dto);
                             }
