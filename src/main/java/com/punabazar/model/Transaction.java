@@ -108,6 +108,12 @@ public class Transaction {
     public BigDecimal getTotalSell() { return totalSell; }
     public void setTotalSell(BigDecimal totalSell) { this.totalSell = totalSell; }
 
+    @Column(precision = 12, scale = 2)
+    private BigDecimal farak = BigDecimal.ZERO;
+
+    public BigDecimal getFarak() { return farak; }
+    public void setFarak(BigDecimal farak) { this.farak = farak; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

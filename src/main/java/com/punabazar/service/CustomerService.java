@@ -138,9 +138,6 @@ public class CustomerService {
         }
         customer.setMagilBaki(magilBaki);
         customer.setBalanceType(balanceType);
-        if (request.getFarak() != null) {
-            customer.setFarak(request.getFarak());
-        }
         if (request.getMarketCodes() != null && !request.getMarketCodes().trim().isEmpty()) {
             customer.setMarketCodes(request.getMarketCodes().trim());
         }
@@ -203,9 +200,6 @@ public class CustomerService {
         }
         if (request.getShare30ProfitOnly() != null) {
             customer.setShare30ProfitOnly(request.getShare30ProfitOnly());
-        }
-        if (request.getFarak() != null) {
-            customer.setFarak(request.getFarak());
         }
         if (request.getMarketCodes() != null && !request.getMarketCodes().trim().isEmpty()) {
             customer.setMarketCodes(request.getMarketCodes().trim());

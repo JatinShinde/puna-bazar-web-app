@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const isPagarEnabled = isPagarEnabledForCustomer(customer);
                 document.getElementById('pagarAmount').value = isPagarEnabled ? (customer.pagar || 0) : 0;
-                document.getElementById('farakAmount').value = customer.farak || 0;
+                document.getElementById('farakAmount').value = 0;
 
                 const commGroup = document.getElementById('commGroup');
                 if (commGroup) commGroup.style.display = isCommEnabled ? 'block' : 'none';

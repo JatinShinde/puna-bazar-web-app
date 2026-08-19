@@ -76,8 +76,8 @@ public class WhatsAppService {
         }
 
         BigDecimal farakVal = BigDecimal.ZERO;
-        if (includeFarak && customer != null && customer.getFarak() != null && customer.getFarak().compareTo(BigDecimal.ZERO) != 0) {
-            farakVal = customer.getFarak();
+        if (includeFarak && tx != null && tx.getFarak() != null && tx.getFarak().compareTo(BigDecimal.ZERO) != 0) {
+            farakVal = tx.getFarak();
         }
         BigDecimal afterFarak = runningNet.subtract(farakVal);
 
@@ -164,8 +164,8 @@ public class WhatsAppService {
         BigDecimal farakVal = BigDecimal.ZERO;
         if (farakParam != null && farakParam.compareTo(BigDecimal.ZERO) != 0) {
             farakVal = farakParam;
-        } else if (customer.getFarak() != null && customer.getFarak().compareTo(BigDecimal.ZERO) != 0) {
-            farakVal = customer.getFarak();
+        } else if (latestTx != null && latestTx.getFarak() != null && latestTx.getFarak().compareTo(BigDecimal.ZERO) != 0) {
+            farakVal = latestTx.getFarak();
         }
 
         BigDecimal pagarVal = BigDecimal.ZERO;

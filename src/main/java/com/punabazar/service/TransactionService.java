@@ -66,8 +66,11 @@ public class TransactionService {
         BigDecimal totalSell = sellPo.add(sellPc);
         BigDecimal totalPayment = payPo.add(payPc);
 
+        BigDecimal farakVal = request.getFarak() != null ? request.getFarak() : BigDecimal.ZERO;
+
         // 2. Save Transaction
         Transaction tx = new Transaction(customer, date, sellPo, sellPc, payPo, payPc, magilBaki, pagarAmount, totalSell);
+        tx.setFarak(farakVal);
         tx = transactionRepository.save(tx);
 
         // 3. Compute and Save Commission (ONLY if selected/enabled for customer)
@@ -84,7 +87,6 @@ public class TransactionService {
         }
 
         // 5. Compute Net Balance Due with Share deduction included (e.g. 40/60 share, 30% profit share)
-        BigDecimal farakVal = request.getFarak() != null ? request.getFarak() : (customer.getFarak() != null ? customer.getFarak() : BigDecimal.ZERO);
         BigDecimal shareRateVal = request.getShareRate() != null ? request.getShareRate() : (customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00"));
         Boolean share30Val = customer.getShare30ProfitOnly();
 
@@ -102,9 +104,6 @@ public class TransactionService {
         }
         if (request.getShareRate() != null) {
             customer.setShareRate(request.getShareRate());
-        }
-        if (request.getFarak() != null) {
-            customer.setFarak(request.getFarak());
         }
         customer.setPreviousBalance(netBalance);
         customerRepository.save(customer);
@@ -175,7 +174,9 @@ public class TransactionService {
             ledger.setPreviousBalance(magilBaki);
         }
 
-        BigDecimal farakVal = request.getFarak() != null ? request.getFarak() : (customer.getFarak() != null ? customer.getFarak() : BigDecimal.ZERO);
+        BigDecimal farakVal = request.getFarak() != null ? request.getFarak() : (tx.getFarak() != null ? tx.getFarak() : BigDecimal.ZERO);
+        tx.setFarak(farakVal);
+        transactionRepository.save(tx);
         BigDecimal shareRateVal = request.getShareRate() != null ? request.getShareRate() : (customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00"));
         Boolean share30Val = customer.getShare30ProfitOnly();
 
@@ -190,9 +191,6 @@ public class TransactionService {
         }
         if (request.getShareRate() != null) {
             customer.setShareRate(request.getShareRate());
-        }
-        if (request.getFarak() != null) {
-            customer.setFarak(request.getFarak());
         }
         customer.setPreviousBalance(netBalance);
         customerRepository.save(customer);
