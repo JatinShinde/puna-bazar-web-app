@@ -37,6 +37,9 @@ public class CustomerService {
     }
 
     public List<Customer> getAllCustomers() {
+        if (customerRepository.count() == 0) {
+            seedDefaultLiveCustomers();
+        }
         List<Customer> list = customerRepository.findAll();
         populateTodayNet(list);
         return list;
@@ -224,5 +227,58 @@ public class CustomerService {
             ledgerRepository.deleteByCustomerId(id);
             customerRepository.delete(customer);
         });
+    }
+
+    @Transactional
+    public void seedDefaultLiveCustomers() {
+        Object[][] list = new Object[][] {
+            {"साई 1", "", "", "", new BigDecimal("-10990.00"), new BigDecimal("300.00"), true, new BigDecimal("1600.00"), false, new BigDecimal("100.00"), false},
+            {"साई 2 ", "", "", "", new BigDecimal("2420.00"), new BigDecimal("300.00"), true, new BigDecimal("0.00"), false, new BigDecimal("100.00"), false},
+            {"काष्टी", "", "", "", new BigDecimal("-6360.00"), new BigDecimal("300.00"), false, new BigDecimal("0.00"), true, new BigDecimal("100.00"), false},
+            {"खेडेकर ", "", "", "", new BigDecimal("4500.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"खेड ", "", "", "", new BigDecimal("3290.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, false, new BigDecimal("100.00"), false},
+            {"सावंत ", "", "", "", new BigDecimal("1911.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"nb( बारामती )", "", "", "", new BigDecimal("32618.50"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"साखरवाडी ", "", "", "", new BigDecimal("-1599.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"भरणेनाका ", "", "", "", new BigDecimal("3648.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"जाणवलकर ", "", "", "", new BigDecimal("345.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, false, new BigDecimal("100.00"), false},
+            {"पवार शेठ ", "", "", "", BigDecimal.ZERO, BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("40.00"), false},
+            {"रॉकी शेठ ", "", "", "", new BigDecimal("-1372.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"फलटण ", "", "", "", new BigDecimal("2355.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"मिरकरवाडा ", "", "", "", new BigDecimal("90.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"काकडे शेठ ", "", "", "", new BigDecimal("738.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"कुंभारी (सोलापूर)", "", "", "", new BigDecimal("1552.50"), BigDecimal.ZERO, false, new BigDecimal("1170.00"), true, new BigDecimal("100.00"), false},
+            {"संतोष शेठ (श्रीगोंदा)", "", "", "", BigDecimal.ZERO, BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"विश्रांतवाडी ", "", "", "", BigDecimal.ZERO, new BigDecimal("300.00"), true, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"रोहन (फलटण)", "", "", "", BigDecimal.ZERO, BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("40.00"), false},
+            {"सातारा", "", "", "", new BigDecimal("22403.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"श्रीगोंदा ", "", "", "", new BigDecimal("45758.30"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("40.00"), false},
+            {"SA (बारामती)", "", "", "", new BigDecimal("38306.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"शितप (तळी )", "", "", "", new BigDecimal("-1986.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"धोत्रे (बारामती)", "", "", "", new BigDecimal("2997.50"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"( UB )", "", "", "", new BigDecimal("-4635.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"( PW )", "", "", "", new BigDecimal("5259.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"लोंढे शेठ ", "", "", "", new BigDecimal("-709.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), true},
+            {"जॉन शेठ  ", "", "", "", new BigDecimal("-466.50"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"वसई ", "", "", "", new BigDecimal("-3710.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, false, new BigDecimal("100.00"), false},
+            {"ठाणे ", "", "", "", new BigDecimal("-1369.00"), new BigDecimal("850.00"), true, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"गोरश्वनाथ ", "", "", "", new BigDecimal("2533.50"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"कदम (तळी )", "", "", "", new BigDecimal("2137.50"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"सिद्धू ", "", "", "", new BigDecimal("4280.00"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"गणेश (फलटण)", "", "", "", new BigDecimal("-568.40"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("40.00"), false},
+            {"चव्हाण शेठ ", "", "", "", new BigDecimal("649.50"), BigDecimal.ZERO, false, BigDecimal.ZERO, true, new BigDecimal("100.00"), false},
+            {"थिटे वस्ती", "", "", "", new BigDecimal("1445.00"), new BigDecimal("300.00"), true, BigDecimal.ZERO, true, new BigDecimal("100.00"), false}
+        };
+
+        for (Object[] item : list) {
+            Customer c = new Customer((String)item[0], (String)item[1], (String)item[2], (String)item[3], (BigDecimal)item[4]);
+            c.setPagar((BigDecimal)item[5]);
+            c.setPagarEnabled((Boolean)item[6]);
+            c.setFarak((BigDecimal)item[7]);
+            c.setCommissionEnabled((Boolean)item[8]);
+            c.setShareRate((BigDecimal)item[9]);
+            c.setShare30ProfitOnly((Boolean)item[10]);
+            customerRepository.save(c);
+        }
     }
 }

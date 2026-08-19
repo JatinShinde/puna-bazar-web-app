@@ -44,6 +44,7 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void run(String... args) throws Exception {
         // 1. Seed Admin User
         if (userRepository.findByUsername("admin").isEmpty()) {
