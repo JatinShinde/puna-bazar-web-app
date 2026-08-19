@@ -653,8 +653,12 @@ public class WhatsAppService {
     }
 
     public List<WhatsAppStatementDTO> getTodayStatements() {
-        java.time.LocalDate today = java.time.LocalDate.now();
-        List<Transaction> todayTxs = transactionRepository.findByTransactionDate(today);
+        return getTodayStatements(java.time.LocalDate.now());
+    }
+
+    public List<WhatsAppStatementDTO> getTodayStatements(java.time.LocalDate targetDate) {
+        java.time.LocalDate dateToUse = (targetDate != null) ? targetDate : java.time.LocalDate.now();
+        List<Transaction> todayTxs = transactionRepository.findByTransactionDate(dateToUse);
         List<WhatsAppStatementDTO> list = new java.util.ArrayList<>();
         java.util.Set<Long> processedCustIds = new java.util.HashSet<>();
 
@@ -664,9 +668,13 @@ public class WhatsAppService {
                     Long cId = tx.getCustomer().getId();
                     if (!processedCustIds.contains(cId)) {
                         processedCustIds.add(cId);
-                        WhatsAppStatementDTO dto = generateStatement(cId);
-                        if (dto != null) {
-                            list.add(dto);
+                        try {
+                            WhatsAppStatementDTO dto = generateStatement(cId);
+                            if (dto != null) {
+                                list.add(dto);
+                            }
+                        } catch (Exception ex) {
+                            // Safe fallback
                         }
                     }
                 }

@@ -19,10 +19,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const localYyyy = localDate.getFullYear();
     const localMm = String(localDate.getMonth() + 1).padStart(2, '0');
     const localDd = String(localDate.getDate()).padStart(2, '0');
-    if (document.getElementById('txDate')) {
-        document.getElementById('txDate').value = `${localYyyy}-${localMm}-${localDd}`;
-        document.getElementById('txDate').addEventListener('change', () => checkIfMarketAlreadyUploaded());
-        document.getElementById('txDate').addEventListener('input', () => checkIfMarketAlreadyUploaded());
+    const todayStr = `${localYyyy}-${localMm}-${localDd}`;
+
+    const globalPicker = document.getElementById('globalDatePicker');
+    const txPicker = document.getElementById('txDate');
+
+    if (globalPicker) {
+        globalPicker.value = todayStr;
+        const onGlobalDateChange = () => {
+            const selectedDate = globalPicker.value;
+            if (txPicker) txPicker.value = selectedDate;
+            loadDashboardMetrics(selectedDate);
+            populateAndRenderReceiptsDropdown(selectedDate);
+        };
+        globalPicker.addEventListener('change', onGlobalDateChange);
+        globalPicker.addEventListener('input', onGlobalDateChange);
+    }
+
+    if (txPicker) {
+        txPicker.value = todayStr;
+        const onTxDateChange = () => {
+            const selectedDate = txPicker.value;
+            if (globalPicker) globalPicker.value = selectedDate;
+            checkIfMarketAlreadyUploaded();
+            loadDashboardMetrics(selectedDate);
+            populateAndRenderReceiptsDropdown(selectedDate);
+        };
+        txPicker.addEventListener('change', onTxDateChange);
+        txPicker.addEventListener('input', onTxDateChange);
     }
 
     // Initial Loaders
@@ -341,9 +365,14 @@ async function checkAuth() {
     }
 }
 
-async function loadDashboardMetrics() {
+async function loadDashboardMetrics(targetDate = null) {
     try {
-        const res = await fetch('/api/dashboard/metrics');
+        const pickerVal = document.getElementById('globalDatePicker')?.value;
+        const dateToFetch = targetDate || pickerVal || '';
+        let url = '/api/dashboard/metrics';
+        if (dateToFetch) url += '?date=' + encodeURIComponent(dateToFetch);
+
+        const res = await fetch(url);
         const data = await res.json();
         latestDashboardData = data;
 
@@ -1516,7 +1545,7 @@ function formatWhatsAppMessageToHtml(rawMsg) {
     return html;
 }
 
-async function populateAndRenderReceiptsDropdown() {
+async function populateAndRenderReceiptsDropdown(targetDate = null) {
     const listContainer = document.getElementById('receiptsDropdownList');
     const countBadge = document.getElementById('receiptsDropdownCount');
     if (!listContainer) return;
@@ -1528,7 +1557,12 @@ async function populateAndRenderReceiptsDropdown() {
     `;
 
     try {
-        const res = await fetch('/api/whatsapp/today-statements');
+        const pickerVal = document.getElementById('globalDatePicker')?.value;
+        const dateToFetch = targetDate || pickerVal || '';
+        let url = '/api/whatsapp/today-statements';
+        if (dateToFetch) url += '?date=' + encodeURIComponent(dateToFetch);
+
+        const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to fetch today statements');
         const statements = await res.json();
 
