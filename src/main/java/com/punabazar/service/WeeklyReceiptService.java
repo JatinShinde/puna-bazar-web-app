@@ -46,17 +46,12 @@ public class WeeklyReceiptService {
             }
 
             if (txs != null) {
-                boolean farakApplied = false;
                 for (Transaction tx : txs) {
                     LocalDate txDate = tx.getTransactionDate() != null ? tx.getTransactionDate() :
                             (tx.getCreatedAt() != null ? tx.getCreatedAt().toLocalDate() : null);
 
                     if (txDate != null && !txDate.isBefore(startOfWeek) && !txDate.isAfter(endOfWeek)) {
-                        boolean includeFarakForTx = !farakApplied;
-                        BigDecimal dailyNet = computeTransactionDailyNet(c, tx, includeFarakForTx);
-                        if (includeFarakForTx && c.getFarak() != null && c.getFarak().compareTo(BigDecimal.ZERO) != 0) {
-                            farakApplied = true;
-                        }
+                        BigDecimal dailyNet = computeTransactionDailyNet(c, tx);
                         DayOfWeek dow = txDate.getDayOfWeek();
                         dayNetMap.put(dow, dayNetMap.get(dow).add(dailyNet));
                     }
@@ -110,8 +105,8 @@ public class WeeklyReceiptService {
         return dtos;
     }
 
-    private BigDecimal computeTransactionDailyNet(Customer c, Transaction tx, boolean includeFarak) {
-        return WhatsAppService.calculateReceiptTodayNet(c, tx, includeFarak, true);
+    private BigDecimal computeTransactionDailyNet(Customer c, Transaction tx) {
+        return WhatsAppService.calculateReceiptTodayNet(c, tx, false, false);
     }
 
     private String formatDayAmount(BigDecimal val, DecimalFormat fmt) {

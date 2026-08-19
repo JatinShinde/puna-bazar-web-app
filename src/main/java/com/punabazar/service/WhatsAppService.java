@@ -34,11 +34,11 @@ public class WhatsAppService {
     }
 
     public static BigDecimal calculateReceiptTodayNet(Customer customer, Transaction tx) {
-        return calculateReceiptTodayNet(customer, tx, true, true);
+        return calculateReceiptTodayNet(customer, tx, true, false);
     }
 
     public static BigDecimal calculateReceiptTodayNet(Customer customer, Transaction tx, boolean includeFarak) {
-        return calculateReceiptTodayNet(customer, tx, includeFarak, true);
+        return calculateReceiptTodayNet(customer, tx, includeFarak, false);
     }
 
     public static BigDecimal calculateReceiptTodayNet(Customer customer, Transaction tx, boolean includeFarak, boolean includeMagilBaki) {
@@ -79,8 +79,25 @@ public class WhatsAppService {
         if (includeFarak && customer != null && customer.getFarak() != null && customer.getFarak().compareTo(BigDecimal.ZERO) != 0) {
             farakVal = customer.getFarak();
         }
+        BigDecimal afterFarak = runningNet.add(farakVal);
 
-        BigDecimal todayNet = runningNet.add(farakVal);
+        BigDecimal shareRate = customer != null && customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00");
+        boolean is30ProfitOnly = customer != null && Boolean.TRUE.equals(customer.getShare30ProfitOnly());
+        boolean isShareEnabled = is30ProfitOnly || (shareRate != null && shareRate.compareTo(new BigDecimal("100.00")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
+        BigDecimal effectiveShareRate = is30ProfitOnly ? new BigDecimal("30.00") : (shareRate != null ? shareRate : new BigDecimal("100.00"));
+
+        BigDecimal shareAmount = BigDecimal.ZERO;
+        if (isShareEnabled) {
+            if (is30ProfitOnly) {
+                if (afterFarak.compareTo(BigDecimal.ZERO) > 0) {
+                    shareAmount = afterFarak.multiply(effectiveShareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                }
+            } else {
+                shareAmount = afterFarak.multiply(effectiveShareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+            }
+        }
+
+        BigDecimal todayNet = afterFarak.subtract(shareAmount);
         if (includeMagilBaki) {
             BigDecimal txMagil = tx.getMagilBaki() != null ? tx.getMagilBaki() : BigDecimal.ZERO;
             todayNet = todayNet.add(txMagil);
