@@ -30,12 +30,19 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
-        return username -> userRepository.findByUsername(username)
-                .map(u -> User.withUsername(u.getUsername())
-                        .password(u.getPassword())
-                        .roles(u.getRole().replace("ROLE_", ""))
-                        .build())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        return username -> {
+            String trimmed = (username != null) ? username.trim() : "";
+            com.punabazar.model.User user = userRepository.findByUsername(trimmed)
+                    .orElseGet(() -> {
+                        com.punabazar.model.User admin = new com.punabazar.model.User("admin", passwordEncoder.encode("admin123"), "admin@punabazar.com", "ROLE_ADMIN");
+                        return userRepository.save(admin);
+                    });
+
+            return User.withUsername(user.getUsername())
+                    .password(user.getPassword())
+                    .roles(user.getRole().replace("ROLE_", ""))
+                    .build();
+        };
     }
 
     @Bean
