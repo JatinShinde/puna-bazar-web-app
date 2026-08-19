@@ -341,6 +341,7 @@ async function loadDashboardMetrics() {
         if (document.getElementById('kpiTotalCommission')) document.getElementById('kpiTotalCommission').textContent = formatCurrency(data.todayTotalCommission);
         if (document.getElementById('kpiTotalMissPayment')) document.getElementById('kpiTotalMissPayment').textContent = formatCurrency(data.todayTotalMissPayment || 0);
         if (document.getElementById('kpiTotalPagar')) document.getElementById('kpiTotalPagar').textContent = formatCurrency(data.todayTotalPagar || 0);
+        if (document.getElementById('kpiTotal30Share')) document.getElementById('kpiTotal30Share').textContent = formatCurrency(data.todayTotal30Share || 0);
         if (document.getElementById('kpiCustomerBalance')) document.getElementById('kpiCustomerBalance').textContent = formatCurrency(data.totalCustomerBalance);
 
         if (document.getElementById('kpiGeneratedReceipts')) {

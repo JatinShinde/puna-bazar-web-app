@@ -105,6 +105,46 @@ public class WhatsAppService {
         return todayNet;
     }
 
+    public static BigDecimal calculateShareAmountForTransaction(Customer customer, Transaction tx) {
+        if (customer == null || tx == null) return BigDecimal.ZERO;
+        BigDecimal sellPo = tx.getSellPo() != null ? tx.getSellPo() : BigDecimal.ZERO;
+        BigDecimal sellPc = tx.getSellPcAmount() != null ? tx.getSellPcAmount() : BigDecimal.ZERO;
+        BigDecimal totalSell = sellPo.add(sellPc);
+
+        boolean isCommEnabled = Boolean.TRUE.equals(customer.getCommissionEnabled());
+        BigDecimal commRate = customer.getCommissionRate() != null ? customer.getCommissionRate() : new BigDecimal("10.00");
+        BigDecimal commissionAmount = isCommEnabled ? totalSell.multiply(commRate).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+
+        BigDecimal payPo = tx.getPaymentPo() != null ? tx.getPaymentPo() : BigDecimal.ZERO;
+        BigDecimal payPc = tx.getPaymentPc() != null ? tx.getPaymentPc() : BigDecimal.ZERO;
+        BigDecimal totalPay = payPo.add(payPc);
+
+        BigDecimal runningNet = totalSell.subtract(commissionAmount).subtract(totalPay);
+
+        boolean isPagarEnabled = Boolean.TRUE.equals(customer.getPagarEnabled());
+        BigDecimal pagarVal = (isPagarEnabled && tx.getPagarAmount() != null) ? tx.getPagarAmount() : BigDecimal.ZERO;
+        runningNet = runningNet.subtract(pagarVal);
+
+        BigDecimal farakVal = (tx.getFarak() != null) ? tx.getFarak() : BigDecimal.ZERO;
+        BigDecimal afterFarak = runningNet.subtract(farakVal);
+
+        BigDecimal shareRate = customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00");
+        boolean is30ProfitOnly = Boolean.TRUE.equals(customer.getShare30ProfitOnly());
+        boolean isShareEnabled = is30ProfitOnly || (shareRate != null && shareRate.compareTo(new BigDecimal("100.00")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
+        BigDecimal effectiveShareRate = is30ProfitOnly ? new BigDecimal("30.00") : (shareRate != null ? shareRate : new BigDecimal("100.00"));
+
+        if (isShareEnabled) {
+            if (is30ProfitOnly) {
+                if (afterFarak.compareTo(BigDecimal.ZERO) > 0) {
+                    return afterFarak.multiply(effectiveShareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                }
+            } else {
+                return afterFarak.multiply(effectiveShareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+            }
+        }
+        return BigDecimal.ZERO;
+    }
+
     public WhatsAppStatementDTO generateStatement(Long customerId) {
         return generateStatement(customerId, null, null, null, null, null, null, null, null);
     }

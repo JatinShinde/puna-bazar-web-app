@@ -56,6 +56,7 @@ public class LedgerService {
         BigDecimal todayNetSum = BigDecimal.ZERO;
         BigDecimal todayTotalMissPayment = BigDecimal.ZERO;
         BigDecimal todayTotalPagar = BigDecimal.ZERO;
+        BigDecimal todayTotal30Share = BigDecimal.ZERO;
 
         if (todayTxs != null && !todayTxs.isEmpty()) {
             for (com.punabazar.model.Transaction tx : todayTxs) {
@@ -66,6 +67,8 @@ public class LedgerService {
                 if (tx.getPagarAmount() != null) {
                     todayTotalPagar = todayTotalPagar.add(tx.getPagarAmount());
                 }
+                BigDecimal shareAmt = WhatsAppService.calculateShareAmountForTransaction(customer, tx);
+                todayTotal30Share = todayTotal30Share.add(shareAmt);
 
                 BigDecimal txTodayNet = WhatsAppService.calculateReceiptTodayNet(customer, tx);
                 todayNetSum = todayNetSum.add(txTodayNet);
@@ -114,6 +117,7 @@ public class LedgerService {
         );
         dto.setTodayTotalMissPayment(todayTotalMissPayment);
         dto.setTodayTotalPagar(todayTotalPagar);
+        dto.setTodayTotal30Share(todayTotal30Share);
         return dto;
     }
 

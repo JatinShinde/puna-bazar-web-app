@@ -50,6 +50,7 @@ public class DashboardMetricsDTO {
 
     private BigDecimal todayTotalMissPayment = BigDecimal.ZERO;
     private BigDecimal todayTotalPagar = BigDecimal.ZERO;
+    private BigDecimal todayTotal30Share = BigDecimal.ZERO;
 
     public BigDecimal getTodayTotalSell() { return todayTotalSell; }
     public void setTodayTotalSell(BigDecimal todayTotalSell) { this.todayTotalSell = todayTotalSell; }
@@ -71,6 +72,9 @@ public class DashboardMetricsDTO {
 
     public BigDecimal getTodayTotalPagar() { return todayTotalPagar; }
     public void setTodayTotalPagar(BigDecimal todayTotalPagar) { this.todayTotalPagar = todayTotalPagar; }
+
+    public BigDecimal getTodayTotal30Share() { return todayTotal30Share; }
+    public void setTodayTotal30Share(BigDecimal todayTotal30Share) { this.todayTotal30Share = todayTotal30Share; }
 
     public BigDecimal getTodayProfitLoss() { return todayProfitLoss; }
     public void setTodayProfitLoss(BigDecimal todayProfitLoss) { this.todayProfitLoss = todayProfitLoss; }
