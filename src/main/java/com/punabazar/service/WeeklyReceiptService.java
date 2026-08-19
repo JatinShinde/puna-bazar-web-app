@@ -111,7 +111,7 @@ public class WeeklyReceiptService {
     }
 
     private BigDecimal computeTransactionDailyNet(Customer c, Transaction tx, boolean includeFarak) {
-        return WhatsAppService.calculateReceiptTodayNet(c, tx, includeFarak, true);
+        return WhatsAppService.calculateReceiptTodayNet(c, tx, includeFarak, false);
     }
 
     private String formatDayAmount(BigDecimal val, DecimalFormat fmt) {
