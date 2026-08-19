@@ -76,8 +76,12 @@ public class CustomerService {
                 for (Transaction tx : todayTxs) {
                     if (tx != null && tx.getCustomer() != null && tx.getCustomer().getId() != null) {
                         Long cId = tx.getCustomer().getId();
-                        BigDecimal txNet = WhatsAppService.calculateReceiptTodayNet(tx.getCustomer(), tx, true, false);
-                        todayNetMap.put(cId, todayNetMap.getOrDefault(cId, BigDecimal.ZERO).add(txNet));
+                        BigDecimal sellPo = tx.getSellPo() != null ? tx.getSellPo() : BigDecimal.ZERO;
+                        BigDecimal sellPc = tx.getSellPcAmount() != null ? tx.getSellPcAmount() : BigDecimal.ZERO;
+                        BigDecimal payPo = tx.getPaymentPo() != null ? tx.getPaymentPo() : BigDecimal.ZERO;
+                        BigDecimal payPc = tx.getPaymentPc() != null ? tx.getPaymentPc() : BigDecimal.ZERO;
+                        BigDecimal netTx = (sellPo.add(sellPc)).subtract(payPo.add(payPc));
+                        todayNetMap.put(cId, todayNetMap.getOrDefault(cId, BigDecimal.ZERO).add(netTx));
                     }
                 }
             }
