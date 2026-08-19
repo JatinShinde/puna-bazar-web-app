@@ -502,10 +502,16 @@ window.switchChartSegment = function(segment) {
     }
 };
 
+let weeklyDailyMetricsData = {};
+
 async function loadWeeklyReceipts() {
     try {
-        const res = await fetch('/api/weekly-receipts');
-        weeklyReceiptsData = await res.json();
+        const [resReceipts, resMetrics] = await Promise.all([
+            fetch('/api/weekly-receipts'),
+            fetch('/api/dashboard/weekly-daily-profit-loss')
+        ]);
+        weeklyReceiptsData = await resReceipts.json();
+        weeklyDailyMetricsData = await resMetrics.json();
         renderWeeklyTable(weeklyReceiptsData);
     } catch (err) {
         console.error('Failed to load weekly receipts:', err);
@@ -580,17 +586,21 @@ function renderWeeklyTable(list) {
 
     const tfoot = document.getElementById('weeklyTableFoot');
     if (tfoot) {
-        let sumMon = 0, sumTue = 0, sumWed = 0, sumThu = 0, sumFri = 0, sumSat = 0, sumSun = 0, sumTotalNet = 0;
-        filtered.forEach(item => {
-            sumMon += item.mondayNet || 0;
-            sumTue += item.tuesdayNet || 0;
-            sumWed += item.wednesdayNet || 0;
-            sumThu += item.thursdayNet || 0;
-            sumFri += item.fridayNet || 0;
-            sumSat += item.saturdayNet || 0;
-            sumSun += item.sundayNet || 0;
-            sumTotalNet += item.weeklyTotalNet || 0;
-        });
+        const getDayVal = (dowKey) => {
+            const m = weeklyDailyMetricsData ? weeklyDailyMetricsData[dowKey] : null;
+            if (!m || m.todayProfitLoss == null) return 0;
+            const val = parseFloat(m.todayProfitLoss) || 0;
+            return m.todayProfitLossStatus === 'LOSS' ? -val : val;
+        };
+
+        let sumMon = getDayVal('MONDAY');
+        let sumTue = getDayVal('TUESDAY');
+        let sumWed = getDayVal('WEDNESDAY');
+        let sumThu = getDayVal('THURSDAY');
+        let sumFri = getDayVal('FRIDAY');
+        let sumSat = getDayVal('SATURDAY');
+        let sumSun = getDayVal('SUNDAY');
+        let sumTotalNet = sumMon + sumTue + sumWed + sumThu + sumFri + sumSat + sumSun;
 
         const formatFooterCell = (val) => {
             if (val == null || val === 0) return '<span style="color: #64748b; font-weight: 400;">-</span>';

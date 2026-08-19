@@ -23,4 +23,12 @@ public class DashboardController {
             java.time.LocalDate date) {
         return ledgerService.getDashboardMetricsForDate(date != null ? date : java.time.LocalDate.now());
     }
+
+    @GetMapping("/weekly-daily-profit-loss")
+    public java.util.Map<String, DashboardMetricsDTO> getWeeklyDailyProfitLoss(
+            @org.springframework.web.bind.annotation.RequestParam(required = false)
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+            java.time.LocalDate date) {
+        return ledgerService.getWeeklyDailyProfitLoss(date);
+    }
 }

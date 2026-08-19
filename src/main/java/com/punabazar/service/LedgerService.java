@@ -147,4 +147,16 @@ public class LedgerService {
     public List<Ledger> getCustomerLedger(Long customerId) {
         return ledgerRepository.findByCustomerIdOrderByEntryDateDesc(customerId);
     }
+
+    public java.util.Map<String, DashboardMetricsDTO> getWeeklyDailyProfitLoss(LocalDate date) {
+        LocalDate refDate = date != null ? date : LocalDate.now();
+        LocalDate startOfWeek = refDate.with(java.time.DayOfWeek.MONDAY);
+
+        java.util.Map<String, DashboardMetricsDTO> map = new java.util.LinkedHashMap<>();
+        for (java.time.DayOfWeek dow : java.time.DayOfWeek.values()) {
+            LocalDate dayDate = startOfWeek.with(dow);
+            map.put(dow.name(), getDashboardMetricsForDate(dayDate));
+        }
+        return map;
+    }
 }
