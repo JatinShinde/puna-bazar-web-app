@@ -34,6 +34,10 @@ public class WhatsAppService {
     }
 
     public static BigDecimal calculateReceiptTodayNet(Customer customer, Transaction tx) {
+        return calculateReceiptTodayNet(customer, tx, true);
+    }
+
+    public static BigDecimal calculateReceiptTodayNet(Customer customer, Transaction tx, boolean includeFarak) {
         if (tx == null) return BigDecimal.ZERO;
 
         BigDecimal sellPoVal = tx.getSellPo() != null ? tx.getSellPo() : BigDecimal.ZERO;
@@ -68,7 +72,7 @@ public class WhatsAppService {
         }
 
         BigDecimal farakVal = BigDecimal.ZERO;
-        if (customer != null && customer.getFarak() != null && customer.getFarak().compareTo(BigDecimal.ZERO) != 0) {
+        if (includeFarak && customer != null && customer.getFarak() != null && customer.getFarak().compareTo(BigDecimal.ZERO) != 0) {
             farakVal = customer.getFarak();
         }
         BigDecimal afterFarak = runningNet.subtract(farakVal);

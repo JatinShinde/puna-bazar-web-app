@@ -684,7 +684,17 @@ window.saveWeeklyCommission = function() {
         commVal = Math.round(Math.abs(weeklySum) * (commPct / 100));
     }
 
-    let netWeekly = weeklySum >= 0 ? (weeklySum - commVal) : (weeklySum + commVal);
+    let afterCommSum = weeklySum >= 0 ? (weeklySum - commVal) : (weeklySum + commVal);
+
+    let missPaymentVal = 0;
+    if (item.formattedWeeklyMessage) {
+        const missMatch = item.formattedWeeklyMessage.match(/MISS PAYMENT\s*:-\*?\s*([\d,]+)/i);
+        if (missMatch && missMatch[1]) {
+            missPaymentVal = parseFloat(missMatch[1].replace(/,/g, '')) || 0;
+        }
+    }
+
+    let netWeekly = afterCommSum - missPaymentVal;
     item.weeklyTotalNet = netWeekly;
     item.weeklyTotalStatus = netWeekly >= 0 ? 'YENE' : 'DENE';
 
@@ -712,6 +722,11 @@ window.saveWeeklyCommission = function() {
     if (commPct > 0) {
         sb.push(`*TOTAL :-*           ${fmt(weeklySum)} ${sumStatusStr}`);
         sb.push(`*COM (${commPct}%) :-*       ${fmt(commVal)}`);
+        sb.push("----------------------------------");
+    }
+
+    if (missPaymentVal > 0) {
+        sb.push(`*MISS PAYMENT :-*    ${fmt(missPaymentVal)}`);
         sb.push("----------------------------------");
     }
 

@@ -50,9 +50,9 @@ public class WeeklyReceiptService {
                     LocalDate txDate = tx.getTransactionDate() != null ? tx.getTransactionDate() :
                             (tx.getCreatedAt() != null ? tx.getCreatedAt().toLocalDate() : null);
 
-                    if (txDate == null || (!txDate.isBefore(startOfWeek) && !txDate.isAfter(endOfWeek))) {
+                    if (txDate != null && !txDate.isBefore(startOfWeek) && !txDate.isAfter(endOfWeek)) {
                         BigDecimal dailyNet = computeTransactionDailyNet(c, tx);
-                        DayOfWeek dow = txDate != null ? txDate.getDayOfWeek() : DayOfWeek.MONDAY;
+                        DayOfWeek dow = txDate.getDayOfWeek();
                         dayNetMap.put(dow, dayNetMap.get(dow).add(dailyNet));
                     }
                 }
@@ -66,7 +66,9 @@ public class WeeklyReceiptService {
             BigDecimal sat = dayNetMap.get(DayOfWeek.SATURDAY);
             BigDecimal sun = dayNetMap.get(DayOfWeek.SUNDAY);
 
-            BigDecimal weeklyTotal = mon.add(tue).add(wed).add(thu).add(fri).add(sat).add(sun);
+            BigDecimal weeklySubtotal = mon.add(tue).add(wed).add(thu).add(fri).add(sat).add(sun);
+            BigDecimal farakVal = (c.getFarak() != null && c.getFarak().compareTo(BigDecimal.ZERO) != 0) ? c.getFarak() : BigDecimal.ZERO;
+            BigDecimal weeklyTotal = weeklySubtotal.subtract(farakVal);
             String status = weeklyTotal.compareTo(BigDecimal.ZERO) >= 0 ? "YENE" : "DENE";
 
             StringBuilder sb = new StringBuilder();
@@ -85,6 +87,12 @@ public class WeeklyReceiptService {
             sb.append("Sat :-               ").append(formatDayAmount(sat, fmt)).append("\n");
             sb.append("Sun :-               ").append(formatDayAmount(sun, fmt)).append("\n");
             sb.append("----------------------------------\n");
+
+            if (farakVal.compareTo(BigDecimal.ZERO) != 0) {
+                sb.append("*MISS PAYMENT :-*     ").append(fmt.format(farakVal.abs())).append("\n");
+                sb.append("----------------------------------\n");
+            }
+
             sb.append("*WEEKLY TOTAL :-*     *").append(fmt.format(weeklyTotal.abs())).append(" ").append(status.toLowerCase()).append("*\n");
             sb.append("==================================\n");
             sb.append("TOTAL BALANCE DUE ").append(fmt.format(weeklyTotal.abs())).append(" ").append(status.toLowerCase());
@@ -106,7 +114,7 @@ public class WeeklyReceiptService {
     }
 
     private BigDecimal computeTransactionDailyNet(Customer c, Transaction tx) {
-        return WhatsAppService.calculateReceiptTodayNet(c, tx);
+        return WhatsAppService.calculateReceiptTodayNet(c, tx, false);
     }
 
     private String formatDayAmount(BigDecimal val, DecimalFormat fmt) {
