@@ -68,20 +68,29 @@ public class CustomerService {
 
     private void populateTodayNet(List<Customer> list) {
         if (list == null || list.isEmpty()) return;
-        LocalDate today = LocalDate.now();
-        for (Customer c : list) {
-            List<Transaction> txs = transactionRepository.findByCustomerIdOrderByTransactionDateDesc(c.getId());
-            BigDecimal todayNetVal = BigDecimal.ZERO;
-            if (txs != null) {
-                for (Transaction tx : txs) {
-                    LocalDate txDate = tx.getTransactionDate() != null ? tx.getTransactionDate() :
-                            (tx.getCreatedAt() != null ? tx.getCreatedAt().toLocalDate() : null);
-                    if (today.equals(txDate)) {
-                        todayNetVal = todayNetVal.add(WhatsAppService.calculateReceiptTodayNet(c, tx, true, false));
+        try {
+            LocalDate today = LocalDate.now();
+            for (Customer c : list) {
+                if (c == null || c.getId() == null) continue;
+                try {
+                    List<Transaction> txs = transactionRepository.findByCustomerIdOrderByTransactionDateDesc(c.getId());
+                    BigDecimal todayNetVal = BigDecimal.ZERO;
+                    if (txs != null) {
+                        for (Transaction tx : txs) {
+                            LocalDate txDate = tx.getTransactionDate() != null ? tx.getTransactionDate() :
+                                    (tx.getCreatedAt() != null ? tx.getCreatedAt().toLocalDate() : null);
+                            if (today.equals(txDate)) {
+                                todayNetVal = todayNetVal.add(WhatsAppService.calculateReceiptTodayNet(c, tx, true, false));
+                            }
+                        }
                     }
+                    c.setTodayNet(todayNetVal);
+                } catch (Exception ex) {
+                    c.setTodayNet(BigDecimal.ZERO);
                 }
             }
-            c.setTodayNet(todayNetVal);
+        } catch (Exception e) {
+            // Prevent any error from breaking customer list retrieval
         }
     }
 

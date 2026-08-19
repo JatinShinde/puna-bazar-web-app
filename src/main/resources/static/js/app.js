@@ -383,10 +383,18 @@ async function loadCustomers(searchQuery = '', marketFilter = 'ALL') {
         if (params.toString()) url += '?' + params.toString();
 
         const res = await fetch(url);
-        customersData = await res.json();
-
-        populateCustomerDropdown(customersData);
-        renderCustomerTable(customersData);
+        if (!res.ok) {
+            console.error('Failed to load customers API, HTTP status:', res.status);
+            return;
+        }
+        const data = await res.json();
+        if (Array.isArray(data)) {
+            customersData = data;
+            populateCustomerDropdown(customersData);
+            renderCustomerTable(customersData);
+        } else {
+            console.error('API did not return an array:', data);
+        }
     } catch (err) {
         console.error('Failed to load customers:', err);
     }
