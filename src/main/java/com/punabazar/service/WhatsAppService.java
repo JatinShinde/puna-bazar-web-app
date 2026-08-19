@@ -79,7 +79,7 @@ public class WhatsAppService {
         if (includeFarak && customer != null && customer.getFarak() != null && customer.getFarak().compareTo(BigDecimal.ZERO) != 0) {
             farakVal = customer.getFarak();
         }
-        BigDecimal afterFarak = runningNet.add(farakVal);
+        BigDecimal afterFarak = runningNet.subtract(farakVal);
 
         BigDecimal shareRate = customer != null && customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00");
         boolean is30ProfitOnly = customer != null && Boolean.TRUE.equals(customer.getShare30ProfitOnly());
@@ -308,22 +308,25 @@ public class WhatsAppService {
             sb.append("---------------------------------\n");
 
             BigDecimal runningNet1 = afterPayVal;
+            sb.append("*REMAINING:-       ").append(fmtNum(runningNet1)).append("*\n");
+
+            if (farakVal != null && farakVal.compareTo(BigDecimal.ZERO) != 0) {
+                sb.append("*MISS PAYMENT:-    ").append(fmtNum(farakVal)).append("*\n");
+                runningNet1 = runningNet1.subtract(farakVal);
+            }
+
             if (pagarVal != null && pagarVal.compareTo(BigDecimal.ZERO) > 0) {
                 sb.append("*PAGAR:-        ").append(fmtNum(pagarVal)).append("*\n");
-                sb.append("---------------------------------\n");
                 runningNet1 = runningNet1.subtract(pagarVal);
             }
 
-            sb.append("*REMAINING:-       ").append(fmtNum(runningNet1)).append("*\n");
+            boolean hasDeductions = (farakVal != null && farakVal.compareTo(BigDecimal.ZERO) != 0) || (pagarVal != null && pagarVal.compareTo(BigDecimal.ZERO) > 0);
+            if (hasDeductions) {
+                sb.append("---------------------------------\n");
+                sb.append("*SUBTOTAL:-         ").append(fmtNum(runningNet1)).append("*\n");
+            }
 
             BigDecimal afterFarak = runningNet1;
-            if (farakVal != null && farakVal.compareTo(BigDecimal.ZERO) != 0) {
-                sb.append("---------------------------------\n");
-                sb.append("*MISS PAYMENT:-    ").append(fmtNum(farakVal)).append("*\n");
-                sb.append("---------------------------------\n");
-                afterFarak = runningNet1.subtract(farakVal);
-                sb.append("*TOTAL:-            ").append(fmtNum(afterFarak)).append("*\n");
-            }
 
             boolean is30ProfitOnly = customer != null && Boolean.TRUE.equals(customer.getShare30ProfitOnly());
             boolean isShareEnabled = is30ProfitOnly || (shareRate != null && shareRate.compareTo(new BigDecimal("100")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
