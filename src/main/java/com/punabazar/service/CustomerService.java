@@ -70,23 +70,20 @@ public class CustomerService {
         if (list == null || list.isEmpty()) return;
         try {
             LocalDate today = LocalDate.now();
-            for (Customer c : list) {
-                if (c == null || c.getId() == null) continue;
-                try {
-                    List<Transaction> txs = transactionRepository.findByCustomerIdOrderByTransactionDateDesc(c.getId());
-                    BigDecimal todayNetVal = BigDecimal.ZERO;
-                    if (txs != null) {
-                        for (Transaction tx : txs) {
-                            LocalDate txDate = tx.getTransactionDate() != null ? tx.getTransactionDate() :
-                                    (tx.getCreatedAt() != null ? tx.getCreatedAt().toLocalDate() : null);
-                            if (today.equals(txDate)) {
-                                todayNetVal = todayNetVal.add(WhatsAppService.calculateReceiptTodayNet(c, tx, true, false));
-                            }
-                        }
+            List<Transaction> todayTxs = transactionRepository.findByTransactionDate(today);
+            java.util.Map<Long, BigDecimal> todayNetMap = new java.util.HashMap<>();
+            if (todayTxs != null) {
+                for (Transaction tx : todayTxs) {
+                    if (tx != null && tx.getCustomer() != null && tx.getCustomer().getId() != null) {
+                        Long cId = tx.getCustomer().getId();
+                        BigDecimal txNet = WhatsAppService.calculateReceiptTodayNet(tx.getCustomer(), tx, true, false);
+                        todayNetMap.put(cId, todayNetMap.getOrDefault(cId, BigDecimal.ZERO).add(txNet));
                     }
-                    c.setTodayNet(todayNetVal);
-                } catch (Exception ex) {
-                    c.setTodayNet(BigDecimal.ZERO);
+                }
+            }
+            for (Customer c : list) {
+                if (c != null && c.getId() != null) {
+                    c.setTodayNet(todayNetMap.getOrDefault(c.getId(), BigDecimal.ZERO));
                 }
             }
         } catch (Exception e) {
