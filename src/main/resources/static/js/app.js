@@ -687,14 +687,27 @@ window.saveWeeklyCommission = function() {
     let afterCommSum = weeklySum >= 0 ? (weeklySum - commVal) : (weeklySum + commVal);
 
     let missPaymentVal = 0;
+    let magilYeneVal = 0;
+    let magilDeneVal = 0;
+
     if (item.formattedWeeklyMessage) {
         const missMatch = item.formattedWeeklyMessage.match(/MISS PAYMENT\s*:-\*?\s*([\d,]+)/i);
         if (missMatch && missMatch[1]) {
             missPaymentVal = parseFloat(missMatch[1].replace(/,/g, '')) || 0;
         }
+
+        const yeneMatch = item.formattedWeeklyMessage.match(/MAGIL YENE\s*:-\*?\s*([\d,]+)/i);
+        if (yeneMatch && yeneMatch[1]) {
+            magilYeneVal = parseFloat(yeneMatch[1].replace(/,/g, '')) || 0;
+        }
+
+        const deneMatch = item.formattedWeeklyMessage.match(/MAGIL DENE\s*:-\*?\s*([\d,]+)/i);
+        if (deneMatch && deneMatch[1]) {
+            magilDeneVal = parseFloat(deneMatch[1].replace(/,/g, '')) || 0;
+        }
     }
 
-    let netWeekly = afterCommSum - missPaymentVal;
+    let netWeekly = afterCommSum - missPaymentVal + magilYeneVal - magilDeneVal;
     item.weeklyTotalNet = netWeekly;
     item.weeklyTotalStatus = netWeekly >= 0 ? 'YENE' : 'DENE';
 
@@ -727,6 +740,16 @@ window.saveWeeklyCommission = function() {
 
     if (missPaymentVal > 0) {
         sb.push(`*MISS PAYMENT :-*    ${fmt(missPaymentVal)}`);
+        sb.push("----------------------------------");
+    }
+
+    if (magilYeneVal > 0) {
+        sb.push(`🔴 *MAGIL YENE :-*   ${fmt(magilYeneVal)} yeṇe`);
+        sb.push("----------------------------------");
+    }
+
+    if (magilDeneVal > 0) {
+        sb.push(`🔴 *MAGIL DENE :-*   ${fmt(magilDeneVal)} dene`);
         sb.push("----------------------------------");
     }
 

@@ -68,7 +68,31 @@ public class WeeklyReceiptService {
 
             BigDecimal weeklySubtotal = mon.add(tue).add(wed).add(thu).add(fri).add(sat).add(sun);
             BigDecimal farakVal = (c.getFarak() != null && c.getFarak().compareTo(BigDecimal.ZERO) != 0) ? c.getFarak() : BigDecimal.ZERO;
-            BigDecimal weeklyTotal = weeklySubtotal.subtract(farakVal);
+            BigDecimal weeklyAfterFarak = weeklySubtotal.subtract(farakVal);
+
+            BigDecimal yeneVal = BigDecimal.ZERO;
+            BigDecimal deneVal = BigDecimal.ZERO;
+
+            if (c.getYene() != null && c.getYene().compareTo(BigDecimal.ZERO) > 0) {
+                yeneVal = c.getYene();
+            } else if (c.getDene() != null && c.getDene().compareTo(BigDecimal.ZERO) > 0) {
+                deneVal = c.getDene();
+            } else if (c.getMagilBaki() != null && c.getMagilBaki().compareTo(BigDecimal.ZERO) > 0) {
+                if ("DENE".equalsIgnoreCase(c.getBalanceType())) {
+                    deneVal = c.getMagilBaki();
+                } else {
+                    yeneVal = c.getMagilBaki();
+                }
+            } else if (c.getPreviousBalance() != null && c.getPreviousBalance().compareTo(BigDecimal.ZERO) != 0) {
+                if (c.getPreviousBalance().compareTo(BigDecimal.ZERO) > 0) {
+                    yeneVal = c.getPreviousBalance();
+                } else {
+                    deneVal = c.getPreviousBalance().abs();
+                }
+            }
+
+            BigDecimal netOpening = yeneVal.subtract(deneVal);
+            BigDecimal weeklyTotal = weeklyAfterFarak.add(netOpening);
             String status = weeklyTotal.compareTo(BigDecimal.ZERO) >= 0 ? "YENE" : "DENE";
 
             StringBuilder sb = new StringBuilder();
@@ -90,6 +114,15 @@ public class WeeklyReceiptService {
 
             if (farakVal.compareTo(BigDecimal.ZERO) != 0) {
                 sb.append("*MISS PAYMENT :-*     ").append(fmt.format(farakVal.abs())).append("\n");
+                sb.append("----------------------------------\n");
+            }
+
+            if (yeneVal.compareTo(BigDecimal.ZERO) > 0) {
+                sb.append("🔴 *MAGIL YENE :-*   ").append(fmt.format(yeneVal)).append(" yeṇe\n");
+                sb.append("----------------------------------\n");
+            }
+            if (deneVal.compareTo(BigDecimal.ZERO) > 0) {
+                sb.append("🔴 *MAGIL DENE :-*   ").append(fmt.format(deneVal)).append(" dene\n");
                 sb.append("----------------------------------\n");
             }
 
