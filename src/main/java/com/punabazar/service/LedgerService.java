@@ -54,14 +54,18 @@ public class LedgerService {
         BigDecimal todayTotalCommission = commSum != null ? BigDecimal.valueOf(commSum) : BigDecimal.ZERO;
 
         BigDecimal todayNetSum = BigDecimal.ZERO;
+        BigDecimal todayTotalMissPayment = BigDecimal.ZERO;
+        BigDecimal todayTotalPagar = BigDecimal.ZERO;
 
         if (todayTxs != null && !todayTxs.isEmpty()) {
             for (com.punabazar.model.Transaction tx : todayTxs) {
                 Customer customer = tx.getCustomer();
-                BigDecimal totalSell = tx.getTotalSell() != null ? tx.getTotalSell() : BigDecimal.ZERO;
-                BigDecimal paymentPo = tx.getPaymentPo() != null ? tx.getPaymentPo() : BigDecimal.ZERO;
-                BigDecimal paymentPc = tx.getPaymentPc() != null ? tx.getPaymentPc() : BigDecimal.ZERO;
-                BigDecimal totalPay = paymentPo.add(paymentPc);
+                if (tx.getFarak() != null) {
+                    todayTotalMissPayment = todayTotalMissPayment.add(tx.getFarak());
+                }
+                if (tx.getPagarAmount() != null) {
+                    todayTotalPagar = todayTotalPagar.add(tx.getPagarAmount());
+                }
 
                 BigDecimal txTodayNet = WhatsAppService.calculateReceiptTodayNet(customer, tx);
                 todayNetSum = todayNetSum.add(txTodayNet);
@@ -76,58 +80,24 @@ public class LedgerService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add) : BigDecimal.ZERO;
 
         List<String> markets = customerRepository.findDistinctCities();
-        List<com.punabazar.model.Transaction> allTxs = transactionRepository.findAll();
-        List<Ledger> allLedgers = ledgerRepository.findAll();
-        java.util.Set<Long> activeCustomerIdsWithReceipts = new java.util.HashSet<>();
+        Long totalCustomerCount = (customers != null) ? (long) customers.size() : 0L;
 
-        if (allTxs != null) {
-            for (com.punabazar.model.Transaction tx : allTxs) {
-                if (tx.getCustomer() != null && tx.getCustomer().getId() != null) {
-                    activeCustomerIdsWithReceipts.add(tx.getCustomer().getId());
+        java.util.Set<String> receiptMarketSet = new java.util.HashSet<>();
+        if (todayTxs != null) {
+            for (com.punabazar.model.Transaction tx : todayTxs) {
+                if (tx.getCustomer() != null) {
+                    String mCity = tx.getCustomer().getCity() != null && !tx.getCustomer().getCity().trim().isEmpty()
+                            ? tx.getCustomer().getCity().trim()
+                            : (tx.getCustomer().getMarketZone() != null ? tx.getCustomer().getMarketZone().trim() : "General");
+                    receiptMarketSet.add(mCity);
                 }
             }
         }
+        Long generatedReceiptCount = (long) receiptMarketSet.size();
+        List<String> generatedReceiptMarkets = new java.util.ArrayList<>(receiptMarketSet);
+        java.util.Collections.sort(generatedReceiptMarkets);
 
-        if (allLedgers != null) {
-            for (Ledger l : allLedgers) {
-                if (l.getCustomer() != null && l.getCustomer().getId() != null) {
-                    activeCustomerIdsWithReceipts.add(l.getCustomer().getId());
-                }
-            }
-        }
-
-        if (customers != null) {
-            for (Customer c : customers) {
-                if (c.getId() != null) {
-                    boolean hasBalance = (c.getPreviousBalance() != null && c.getPreviousBalance().compareTo(BigDecimal.ZERO) != 0)
-                            || (c.getYene() != null && c.getYene().compareTo(BigDecimal.ZERO) != 0)
-                            || (c.getDene() != null && c.getDene().compareTo(BigDecimal.ZERO) != 0)
-                            || (c.getMagilBaki() != null && c.getMagilBaki().compareTo(BigDecimal.ZERO) != 0);
-                    if (hasBalance) {
-                        activeCustomerIdsWithReceipts.add(c.getId());
-                    }
-                }
-            }
-        }
-
-        long generatedReceiptCount = activeCustomerIdsWithReceipts.size();
-        long totalCustomerCount = customers != null ? customers.size() : 0;
-
-        List<String> generatedReceiptMarkets = new java.util.ArrayList<>();
-        if (customers != null) {
-            for (Customer c : customers) {
-                if (c.getId() != null && activeCustomerIdsWithReceipts.contains(c.getId())) {
-                    String cityStr = c.getCity() != null ? c.getCity().trim() : "";
-                    String nameStr = c.getName() != null ? c.getName().trim() : "";
-                    String label = (!cityStr.isEmpty()) ? cityStr + " (" + nameStr + ")" : nameStr + " (General Market)";
-                    if (!generatedReceiptMarkets.contains(label)) {
-                        generatedReceiptMarkets.add(label);
-                    }
-                }
-            }
-        }
-
-        return new DashboardMetricsDTO(
+        DashboardMetricsDTO dto = new DashboardMetricsDTO(
                 todayTotalSell,
                 todayPoSell,
                 todayPcSell,
@@ -142,6 +112,9 @@ public class LedgerService {
                 totalCustomerCount,
                 generatedReceiptMarkets
         );
+        dto.setTodayTotalMissPayment(todayTotalMissPayment);
+        dto.setTodayTotalPagar(todayTotalPagar);
+        return dto;
     }
 
     public List<Ledger> getCustomerLedger(Long customerId) {

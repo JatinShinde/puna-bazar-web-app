@@ -48,6 +48,9 @@ public class DashboardMetricsDTO {
         this(todayTotalSell, BigDecimal.ZERO, BigDecimal.ZERO, todayTotalPayment, todayTotalCommission, BigDecimal.ZERO, "PROFIT", totalCustomerBalance, activeCustomerCount, activeMarkets, 0L, activeCustomerCount);
     }
 
+    private BigDecimal todayTotalMissPayment = BigDecimal.ZERO;
+    private BigDecimal todayTotalPagar = BigDecimal.ZERO;
+
     public BigDecimal getTodayTotalSell() { return todayTotalSell; }
     public void setTodayTotalSell(BigDecimal todayTotalSell) { this.todayTotalSell = todayTotalSell; }
 
@@ -62,6 +65,12 @@ public class DashboardMetricsDTO {
 
     public BigDecimal getTodayTotalCommission() { return todayTotalCommission; }
     public void setTodayTotalCommission(BigDecimal todayTotalCommission) { this.todayTotalCommission = todayTotalCommission; }
+
+    public BigDecimal getTodayTotalMissPayment() { return todayTotalMissPayment; }
+    public void setTodayTotalMissPayment(BigDecimal todayTotalMissPayment) { this.todayTotalMissPayment = todayTotalMissPayment; }
+
+    public BigDecimal getTodayTotalPagar() { return todayTotalPagar; }
+    public void setTodayTotalPagar(BigDecimal todayTotalPagar) { this.todayTotalPagar = todayTotalPagar; }
 
     public BigDecimal getTodayProfitLoss() { return todayProfitLoss; }
     public void setTodayProfitLoss(BigDecimal todayProfitLoss) { this.todayProfitLoss = todayProfitLoss; }
