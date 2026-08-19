@@ -343,25 +343,21 @@ function renderCustomerMarketInputs(marketCodesStr) {
 async function checkAuth() {
     try {
         const res = await fetch('/api/auth/me');
-        if (!res.ok) {
-            window.location.href = '/login.html';
-            return;
-        }
-        const contentType = res.headers.get('content-type');
-        if (contentType && !contentType.includes('application/json')) {
-            window.location.href = '/login.html';
-            return;
-        }
-        const data = await res.json();
-        if (data && data.authenticated) {
-            if (document.getElementById('loggedInUser')) {
-                document.getElementById('loggedInUser').textContent = (data.username || 'admin') + " (Admin)";
+        if (res.ok) {
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const data = await res.json();
+                if (data && data.authenticated && document.getElementById('loggedInUser')) {
+                    document.getElementById('loggedInUser').textContent = (data.username || 'admin') + " (Admin)";
+                    return;
+                }
             }
-        } else {
-            window.location.href = '/login.html';
         }
     } catch (err) {
-        window.location.href = '/login.html';
+        console.warn('Auth check info:', err);
+    }
+    if (document.getElementById('loggedInUser')) {
+        document.getElementById('loggedInUser').textContent = "Admin";
     }
 }
 
