@@ -63,26 +63,33 @@ public class DataInitializer implements CommandLineRunner {
                         com.fasterxml.jackson.databind.JsonNode rootNode = mapper.readTree(inputStream);
                         if (rootNode != null && rootNode.isArray() && rootNode.size() > 0) {
                             for (com.fasterxml.jackson.databind.JsonNode node : rootNode) {
-                                Customer c = new Customer();
-                                c.setName(node.has("name") ? node.get("name").asText("") : "");
-                                c.setMobileNumber(node.has("mobileNumber") ? node.get("mobileNumber").asText("") : "");
-                                c.setCity(node.has("city") ? node.get("city").asText("") : "");
-                                c.setMarketZone(node.has("marketZone") ? node.get("marketZone").asText("") : "");
-                                c.setPreviousBalance(node.has("previousBalance") ? new BigDecimal(node.get("previousBalance").asText("0")) : BigDecimal.ZERO);
-                                c.setCommissionRate(node.has("commissionRate") ? new BigDecimal(node.get("commissionRate").asText("10")) : new BigDecimal("10.00"));
-                                c.setCommissionEnabled(node.has("commissionEnabled") && node.get("commissionEnabled").asBoolean(false));
-                                c.setPagar(node.has("pagar") ? new BigDecimal(node.get("pagar").asText("0")) : BigDecimal.ZERO);
-                                c.setPagarEnabled(node.has("pagarEnabled") && node.get("pagarEnabled").asBoolean(false));
-                                c.setMagilBaki(node.has("magilBaki") ? new BigDecimal(node.get("magilBaki").asText("0")) : BigDecimal.ZERO);
-                                c.setYene(node.has("yene") ? new BigDecimal(node.get("yene").asText("0")) : BigDecimal.ZERO);
-                                c.setDene(node.has("dene") ? new BigDecimal(node.get("dene").asText("0")) : BigDecimal.ZERO);
-                                c.setBalanceType(node.has("balanceType") ? node.get("balanceType").asText("YENE") : "YENE");
-                                c.setFarak(node.has("farak") ? new BigDecimal(node.get("farak").asText("0")) : BigDecimal.ZERO);
-                                c.setMarketCodes(node.has("marketCodes") ? node.get("marketCodes").asText("PO,PC") : "PO,PC");
-                                c.setReceiptStyle(node.has("receiptStyle") ? node.get("receiptStyle").asText("TYPE_1") : "TYPE_1");
-                                c.setShareRate(node.has("shareRate") ? new BigDecimal(node.get("shareRate").asText("100")) : new BigDecimal("100.00"));
-                                c.setShare30ProfitOnly(node.has("share30ProfitOnly") && node.get("share30ProfitOnly").asBoolean(false));
-                                customerRepository.save(c);
+                                try {
+                                    String name = node.has("name") ? node.get("name").asText("").trim() : "";
+                                    if (name.isEmpty()) continue;
+
+                                    Customer c = new Customer();
+                                    c.setName(name);
+                                    c.setMobileNumber(node.has("mobileNumber") ? node.get("mobileNumber").asText("") : "");
+                                    c.setCity(node.has("city") ? node.get("city").asText("") : "");
+                                    c.setMarketZone(node.has("marketZone") ? node.get("marketZone").asText("") : "");
+                                    c.setPreviousBalance(node.has("previousBalance") ? new BigDecimal(node.get("previousBalance").asText("0")) : BigDecimal.ZERO);
+                                    c.setCommissionRate(node.has("commissionRate") ? new BigDecimal(node.get("commissionRate").asText("10")) : new BigDecimal("10.00"));
+                                    c.setCommissionEnabled(node.has("commissionEnabled") && node.get("commissionEnabled").asBoolean(false));
+                                    c.setPagar(node.has("pagar") ? new BigDecimal(node.get("pagar").asText("0")) : BigDecimal.ZERO);
+                                    c.setPagarEnabled(node.has("pagarEnabled") && node.get("pagarEnabled").asBoolean(false));
+                                    c.setMagilBaki(node.has("magilBaki") ? new BigDecimal(node.get("magilBaki").asText("0")) : BigDecimal.ZERO);
+                                    c.setYene(node.has("yene") ? new BigDecimal(node.get("yene").asText("0")) : BigDecimal.ZERO);
+                                    c.setDene(node.has("dene") ? new BigDecimal(node.get("dene").asText("0")) : BigDecimal.ZERO);
+                                    c.setBalanceType(node.has("balanceType") ? node.get("balanceType").asText("YENE") : "YENE");
+                                    c.setFarak(node.has("farak") ? new BigDecimal(node.get("farak").asText("0")) : BigDecimal.ZERO);
+                                    c.setMarketCodes(node.has("marketCodes") ? node.get("marketCodes").asText("PO,PC") : "PO,PC");
+                                    c.setReceiptStyle(node.has("receiptStyle") ? node.get("receiptStyle").asText("TYPE_1") : "TYPE_1");
+                                    c.setShareRate(node.has("shareRate") ? new BigDecimal(node.get("shareRate").asText("100")) : new BigDecimal("100.00"));
+                                    c.setShare30ProfitOnly(node.has("share30ProfitOnly") && node.get("share30ProfitOnly").asBoolean(false));
+                                    customerRepository.save(c);
+                                } catch (Exception nodeEx) {
+                                    System.err.println("Error saving node: " + nodeEx.getMessage());
+                                }
                             }
                             System.out.println(">>> Successfully seeded " + rootNode.size() + " live customers from JSON!");
                         }
