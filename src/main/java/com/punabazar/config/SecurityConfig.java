@@ -38,20 +38,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/login", "/login.html", "/css/**", "/js/**", "/images/**", "/h2-console/**", "/favicon.ico", "/api/**").permitAll()
-                .anyRequest().authenticated()
-            )
-            .formLogin(form -> form
-                .loginPage("/login.html")
-                .loginProcessingUrl("/login")
-                .defaultSuccessUrl("/index.html", true)
-                .failureUrl("/login.html?error=true")
-                .permitAll()
-            )
-            .logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/login.html?logout=true")
-                .permitAll()
+                .anyRequest().permitAll()
             );
 
         return http.build();
