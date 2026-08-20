@@ -31,8 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     checkAuth();
     loadDashboardMetrics();
-    loadCustomerDropdownOptions();
-    loadActiveCustomerLedgers();
+    loadCustomers();
 
     // Event Listeners for Live Math Calculator Engine
     ['tradeReceiptStyle', 'commPercent', 'shareRatePercent', 'tradeYene', 'tradeDene', 'farakAmount', 'pagarAmount'].forEach(id => {
