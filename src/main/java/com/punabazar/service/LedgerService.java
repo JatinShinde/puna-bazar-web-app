@@ -51,8 +51,7 @@ public class LedgerService {
         BigDecimal todayPoSell = poSum != null ? BigDecimal.valueOf(poSum) : BigDecimal.ZERO;
         BigDecimal todayPcSell = pcSum != null ? BigDecimal.valueOf(pcSum) : BigDecimal.ZERO;
         BigDecimal todayTotalPayment = paySum != null ? BigDecimal.valueOf(paySum) : BigDecimal.ZERO;
-        BigDecimal todayTotalCommission = commSum != null ? BigDecimal.valueOf(commSum) : BigDecimal.ZERO;
-
+        BigDecimal todayTotalCommission = BigDecimal.ZERO;
         BigDecimal todayNetSum = BigDecimal.ZERO;
         BigDecimal todayTotalMissPayment = BigDecimal.ZERO;
         BigDecimal todayTotalPagar = BigDecimal.ZERO;
@@ -63,17 +62,20 @@ public class LedgerService {
                 if (tx == null) continue;
                 try {
                     Customer customer = tx.getCustomer();
-                    if (tx.getFarak() != null) {
-                        todayTotalMissPayment = todayTotalMissPayment.add(tx.getFarak());
-                    }
-                    if (tx.getPagarAmount() != null) {
-                        todayTotalPagar = todayTotalPagar.add(tx.getPagarAmount());
-                    }
                     if (customer != null) {
-                        BigDecimal shareAmt = WhatsAppService.calculateShareAmountForTransaction(customer, tx);
+                        BigDecimal commAmt = CalculationEngineService.calculateTransactionCommission(customer, tx);
+                        todayTotalCommission = todayTotalCommission.add(commAmt);
+
+                        BigDecimal shareAmt = CalculationEngineService.calculateTransactionShare(customer, tx);
                         todayTotal30Share = todayTotal30Share.add(shareAmt);
 
-                        BigDecimal txTodayNet = WhatsAppService.calculateReceiptTodayNet(customer, tx);
+                        BigDecimal pagarVal = Boolean.TRUE.equals(customer.getPagarEnabled()) ? (customer.getPagar() != null ? customer.getPagar() : BigDecimal.ZERO) : BigDecimal.ZERO;
+                        todayTotalPagar = todayTotalPagar.add(pagarVal);
+
+                        BigDecimal farakVal = tx.getFarak() != null ? tx.getFarak() : (customer.getFarak() != null ? customer.getFarak() : BigDecimal.ZERO);
+                        todayTotalMissPayment = todayTotalMissPayment.add(farakVal);
+
+                        BigDecimal txTodayNet = CalculationEngineService.calculateTransactionTodayNet(customer, tx);
                         todayNetSum = todayNetSum.add(txTodayNet);
                     }
                 } catch (Exception ex) {
