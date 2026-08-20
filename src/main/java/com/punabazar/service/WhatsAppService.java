@@ -681,7 +681,7 @@ public class WhatsAppService {
                     if (!processedCustIds.contains(cId)) {
                         processedCustIds.add(cId);
                         try {
-                            WhatsAppStatementDTO dto = generateStatement(cId);
+                            WhatsAppStatementDTO dto = generateStatement(cId, null, null, null, null, null, null, null, null, null, tx);
                             if (dto != null) {
                                 list.add(dto);
                             }
