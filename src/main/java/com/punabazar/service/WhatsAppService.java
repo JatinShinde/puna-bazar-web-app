@@ -665,7 +665,12 @@ public class WhatsAppService {
     }
 
     public List<WhatsAppStatementDTO> getTodayStatements() {
-        List<Transaction> todayTxs = transactionRepository.findByTransactionDate(java.time.LocalDate.now());
+        return getTodayStatements(java.time.LocalDate.now());
+    }
+
+    public List<WhatsAppStatementDTO> getTodayStatements(java.time.LocalDate targetDate) {
+        java.time.LocalDate dateToUse = (targetDate != null) ? targetDate : java.time.LocalDate.now();
+        List<Transaction> todayTxs = transactionRepository.findByTransactionDate(dateToUse);
         List<WhatsAppStatementDTO> list = new java.util.ArrayList<>();
         java.util.Set<Long> processedCustIds = new java.util.HashSet<>();
 

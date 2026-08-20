@@ -21,12 +21,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const localDd = String(localDate.getDate()).padStart(2, '0');
     const todayStr = `${localYyyy}-${localMm}-${localDd}`;
 
+    const globalPicker = document.getElementById('globalDatePicker');
     const txPicker = document.getElementById('txDate');
+
+    if (globalPicker) {
+        globalPicker.value = todayStr;
+        const onGlobalDateChange = () => {
+            const selectedDate = globalPicker.value;
+            if (txPicker) txPicker.value = selectedDate;
+            loadDashboardMetrics(selectedDate);
+            if (typeof populateAndRenderReceiptsDropdown === 'function') {
+                populateAndRenderReceiptsDropdown(selectedDate);
+            }
+        };
+        globalPicker.addEventListener('change', onGlobalDateChange);
+        globalPicker.addEventListener('input', onGlobalDateChange);
+    }
+
     if (txPicker) {
         txPicker.value = todayStr;
-        txPicker.addEventListener('change', () => {
+        const onTxDateChange = () => {
+            const selectedDate = txPicker.value;
+            if (globalPicker) globalPicker.value = selectedDate;
             checkIfMarketAlreadyUploaded();
-        });
+            loadDashboardMetrics(selectedDate);
+            if (typeof populateAndRenderReceiptsDropdown === 'function') {
+                populateAndRenderReceiptsDropdown(selectedDate);
+            }
+        };
+        txPicker.addEventListener('change', onTxDateChange);
+        txPicker.addEventListener('input', onTxDateChange);
     }
 
     checkAuth();
@@ -340,9 +364,14 @@ async function checkAuth() {
     }
 }
 
-async function loadDashboardMetrics() {
+async function loadDashboardMetrics(targetDate = null) {
     try {
-        const res = await fetch('/api/dashboard/metrics');
+        const pickerVal = document.getElementById('globalDatePicker')?.value;
+        const dateToFetch = targetDate || pickerVal || '';
+        let url = '/api/dashboard/metrics';
+        if (dateToFetch) url += '?date=' + encodeURIComponent(dateToFetch);
+
+        const res = await fetch(url);
         const data = await res.json();
         latestDashboardData = data;
 
