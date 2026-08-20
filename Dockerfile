@@ -33,4 +33,4 @@ EXPOSE 8080
 ENV PORT=8080
 
 # Entry point to execute the app
-ENTRYPOINT ["java", "-Dspring.jpa.database-platform=org.hibernate.dialect.MySQLDialect", "-Dspring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect", "-Dspring.datasource.driverClassName=com.mysql.cj.jdbc.Driver", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
