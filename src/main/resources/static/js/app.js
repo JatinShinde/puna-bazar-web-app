@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const selectedDate = globalPicker.value;
             if (txPicker) txPicker.value = selectedDate;
             loadDashboardMetrics(selectedDate);
+            loadCustomers(document.getElementById('searchInput')?.value || '', getSelectedMarket(), selectedDate);
             if (typeof populateAndRenderReceiptsDropdown === 'function') {
                 populateAndRenderReceiptsDropdown(selectedDate);
             }
@@ -45,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (globalPicker) globalPicker.value = selectedDate;
             checkIfMarketAlreadyUploaded();
             loadDashboardMetrics(selectedDate);
+            loadCustomers(document.getElementById('searchInput')?.value || '', getSelectedMarket(), selectedDate);
             if (typeof populateAndRenderReceiptsDropdown === 'function') {
                 populateAndRenderReceiptsDropdown(selectedDate);
             }
@@ -417,12 +419,16 @@ async function loadDashboardMetrics(targetDate = null) {
 }
 
 // 3. Load & Filter Customers
-async function loadCustomers(searchQuery = '', marketFilter = 'ALL') {
+async function loadCustomers(searchQuery = '', marketFilter = 'ALL', targetDate = null) {
     try {
         let url = '/api/customers';
         const params = new URLSearchParams();
         if (searchQuery) params.append('search', searchQuery);
         if (marketFilter && marketFilter !== 'ALL') params.append('city', marketFilter);
+        
+        const pickerVal = document.getElementById('globalDatePicker')?.value || document.getElementById('txDate')?.value;
+        const dateToFetch = targetDate || pickerVal || '';
+        if (dateToFetch) params.append('date', dateToFetch);
         
         if (params.toString()) url += '?' + params.toString();
 

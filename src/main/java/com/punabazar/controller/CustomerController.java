@@ -20,13 +20,16 @@ public class CustomerController {
 
     @GetMapping
     public List<Customer> getAll(@RequestParam(required = false) String search,
-                                 @RequestParam(required = false) String city) {
+                                 @RequestParam(required = false) String city,
+                                 @RequestParam(required = false)
+                                 @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+                                 java.time.LocalDate date) {
         if (search != null && !search.trim().isEmpty()) {
-            return customerService.searchCustomers(search);
+            return customerService.searchCustomers(search, date);
         } else if (city != null && !city.trim().isEmpty()) {
-            return customerService.getCustomersByCity(city);
+            return customerService.getCustomersByCity(city, date);
         }
-        return customerService.getAllCustomers();
+        return customerService.getAllCustomers(date);
     }
 
     @GetMapping("/{id}")

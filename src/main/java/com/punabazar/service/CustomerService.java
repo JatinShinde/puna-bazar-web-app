@@ -37,6 +37,10 @@ public class CustomerService {
     }
 
     public List<Customer> getAllCustomers() {
+        return getAllCustomers(null);
+    }
+
+    public List<Customer> getAllCustomers(LocalDate targetDate) {
         if (customerRepository.count() == 0) {
             Object[][] listData = new Object[][] {
                 {"साई 1", "", "", "", new BigDecimal("-10990.00"), new BigDecimal("300.00"), true, new BigDecimal("1600.00"), false, new BigDecimal("100.00"), false},
@@ -89,39 +93,47 @@ public class CustomerService {
             }
         }
         List<Customer> list = customerRepository.findAll();
-        populateTodayNet(list);
+        populateTodayNet(list, targetDate);
         return list;
     }
 
     public Customer getCustomerById(Long id) {
         Customer c = customerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Customer not found: " + id));
-        populateTodayNet(java.util.Collections.singletonList(c));
+        populateTodayNet(java.util.Collections.singletonList(c), null);
         return c;
     }
 
     public List<Customer> searchCustomers(String query) {
+        return searchCustomers(query, null);
+    }
+
+    public List<Customer> searchCustomers(String query, LocalDate targetDate) {
         List<Customer> list;
         if (query == null || query.trim().isEmpty()) {
             list = customerRepository.findAll();
         } else {
             list = customerRepository.searchCustomers(query.trim());
         }
-        populateTodayNet(list);
+        populateTodayNet(list, targetDate);
         return list;
     }
 
     public List<Customer> getCustomersByCity(String city) {
+        return getCustomersByCity(city, null);
+    }
+
+    public List<Customer> getCustomersByCity(String city, LocalDate targetDate) {
         List<Customer> list = customerRepository.findByCityIgnoreCase(city);
-        populateTodayNet(list);
+        populateTodayNet(list, targetDate);
         return list;
     }
 
-    private void populateTodayNet(List<Customer> list) {
+    private void populateTodayNet(List<Customer> list, LocalDate targetDate) {
         if (list == null || list.isEmpty()) return;
         try {
-            LocalDate today = LocalDate.now();
-            List<Transaction> todayTxs = transactionRepository.findByTransactionDate(today);
+            LocalDate dateToUse = targetDate != null ? targetDate : LocalDate.now();
+            List<Transaction> todayTxs = transactionRepository.findByTransactionDate(dateToUse);
             java.util.Map<Long, BigDecimal> todayNetMap = new java.util.HashMap<>();
             if (todayTxs != null) {
                 for (Transaction tx : todayTxs) {
