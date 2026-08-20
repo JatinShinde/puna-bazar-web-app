@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     loadDashboardMetrics();
     loadCustomers();
+    populateAndRenderReceiptsDropdown();
 
     // Event Listeners for Live Math Calculator Engine
     ['tradeReceiptStyle', 'commPercent', 'shareRatePercent', 'tradeYene', 'tradeDene', 'farakAmount', 'pagarAmount'].forEach(id => {
@@ -1550,7 +1551,7 @@ function formatWhatsAppMessageToHtml(rawMsg) {
     return html;
 }
 
-async function populateAndRenderReceiptsDropdown() {
+async function populateAndRenderReceiptsDropdown(targetDate = null) {
     const listContainer = document.getElementById('receiptsDropdownList');
     const countBadge = document.getElementById('receiptsDropdownCount');
     if (!listContainer) return;
@@ -1562,7 +1563,12 @@ async function populateAndRenderReceiptsDropdown() {
     `;
 
     try {
-        const res = await fetch('/api/whatsapp/today-statements');
+        const pickerVal = document.getElementById('globalDatePicker')?.value || document.getElementById('txDate')?.value;
+        const dateToFetch = targetDate || pickerVal || '';
+        let url = '/api/whatsapp/today-statements';
+        if (dateToFetch) url += '?date=' + encodeURIComponent(dateToFetch);
+
+        const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to fetch today statements');
         const statements = await res.json();
 
