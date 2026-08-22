@@ -345,7 +345,6 @@ function renderCustomerMarketInputs(marketCodesStr) {
     });
 }
 
-// 1. Auth Check
 async function checkAuth() {
     try {
         const res = await fetch('/api/auth/me');
@@ -353,17 +352,33 @@ async function checkAuth() {
             const contentType = res.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
                 const data = await res.json();
-                if (data && data.authenticated && document.getElementById('loggedInUser')) {
-                    document.getElementById('loggedInUser').textContent = (data.username || 'admin') + " (Admin)";
+                if (data && data.authenticated) {
+                    const roles = data.roles || [];
+                    const isAdmin = roles.some(r => (r.authority && r.authority.includes('ADMIN')) || r === 'ROLE_ADMIN') || data.username === 'POONA@B456';
+                    
+                    if (isAdmin) {
+                        if (document.getElementById('loggedInUser')) {
+                            document.getElementById('loggedInUser').textContent = (data.username || 'Admin') + " (Admin)";
+                        }
+                        if (document.getElementById('btnOpenUserAccess')) {
+                            document.getElementById('btnOpenUserAccess').style.display = 'flex';
+                        }
+                    } else {
+                        // Regular user view
+                        const uName = localStorage.getItem('pb_user_name') || data.username || 'User';
+                        if (document.getElementById('loggedInUser')) {
+                            document.getElementById('loggedInUser').textContent = `${uName} (User View)`;
+                        }
+                        if (document.getElementById('btnOpenUserAccess')) {
+                            document.getElementById('btnOpenUserAccess').style.display = 'none';
+                        }
+                    }
                     return;
                 }
             }
         }
     } catch (err) {
         console.warn('Auth check info:', err);
-    }
-    if (document.getElementById('loggedInUser')) {
-        document.getElementById('loggedInUser').textContent = "Admin";
     }
 }
 
@@ -2835,5 +2850,190 @@ function downloadReceiptPhoto() {
     link.href = canvas.toDataURL('image/png');
     link.click();
 }
+
+/* ==========================================================================
+   ADMIN USER ACCESS CONTROL & TIME WINDOW FUNCTIONS
+   ========================================================================== */
+
+async function openUserAccessModal() {
+    const modal = document.getElementById('userAccessModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        await loadAccessSettings();
+        await loadUserAccessList();
+    }
+}
+
+async function loadAccessSettings() {
+    try {
+        const res = await fetch('/api/user-access/settings');
+        if (res.ok) {
+            const data = await res.json();
+            if (document.getElementById('settingStartTime')) document.getElementById('settingStartTime').value = data.startTime || '00:00';
+            if (document.getElementById('settingEndTime')) document.getElementById('settingEndTime').value = data.endTime || '18:00';
+            if (document.getElementById('settingCommonPass')) document.getElementById('settingCommonPass').value = data.commonPassword || '123456';
+            if (document.getElementById('settingAdminPass')) document.getElementById('settingAdminPass').value = data.adminPassword || '456B@POONA';
+        }
+    } catch (err) {
+        console.error('Error loading settings:', err);
+    }
+}
+
+async function saveAccessSettings() {
+    const startTime = document.getElementById('settingStartTime')?.value;
+    const endTime = document.getElementById('settingEndTime')?.value;
+    const commonPassword = document.getElementById('settingCommonPass')?.value;
+    const adminPassword = document.getElementById('settingAdminPass')?.value;
+
+    try {
+        const res = await fetch('/api/user-access/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ startTime, endTime, commonPassword, adminPassword })
+        });
+        if (res.ok) {
+            alert('✅ Operating hours, Common Password & Admin Password updated successfully!');
+        } else {
+            alert('⚠️ Failed to save settings.');
+        }
+    } catch (err) {
+        alert('⚠️ Connection error saving settings.');
+    }
+}
+
+async function loadUserAccessList() {
+    const tbody = document.getElementById('userAccessTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1rem;">Loading user access list... ⏳</td>
+        </tr>
+    `;
+
+    try {
+        const res = await fetch('/api/user-access/users');
+        if (!res.ok) throw new Error('Failed to fetch users');
+        const users = await res.json();
+
+        if (!users || users.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1rem;">No user access requests found yet.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        let html = '';
+        users.forEach(u => {
+            let statusBadge = '';
+            if (u.status === 'APPROVED') {
+                statusBadge = `<span style="background: rgba(52, 211, 153, 0.2); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.4); padding: 0.2rem 0.5rem; border-radius: 0.4rem; font-weight: 700; font-size: 0.75rem;">✅ Approved</span>`;
+            } else if (u.status === 'PAUSED') {
+                statusBadge = `<span style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); padding: 0.2rem 0.5rem; border-radius: 0.4rem; font-weight: 700; font-size: 0.75rem;">⏸️ Paused</span>`;
+            } else {
+                statusBadge = `<span style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); padding: 0.2rem 0.5rem; border-radius: 0.4rem; font-weight: 700; font-size: 0.75rem;">⏳ Pending</span>`;
+            }
+
+            html += `
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                    <td style="padding: 0.65rem 0.5rem; font-weight: 700; color: #f8fafc;">${escapeHtml(u.name || 'User')}</td>
+                    <td style="padding: 0.65rem 0.5rem; color: #7dd3fc; font-family: monospace;">${escapeHtml(u.phone || '-')}</td>
+                    <td style="padding: 0.65rem 0.5rem;">${statusBadge}</td>
+                    <td style="padding: 0.65rem 0.5rem; text-align: right;">
+                        <div style="display: flex; justify-content: flex-end; gap: 0.35rem;">
+                            ${u.status !== 'APPROVED' ? `<button onclick="approveUserAccess(${u.id})" style="background: #059669; color: #fff; border: none; padding: 0.25rem 0.55rem; border-radius: 0.35rem; font-size: 0.75rem; font-weight: 700; cursor: pointer;">✅ Allow</button>` : ''}
+                            <button onclick="togglePauseUserAccess(${u.id})" style="background: ${u.status === 'PAUSED' ? '#0284c7' : '#d97706'}; color: #fff; border: none; padding: 0.25rem 0.55rem; border-radius: 0.35rem; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+                                ${u.status === 'PAUSED' ? '▶️ Resume' : '⏸️ Pause'}
+                            </button>
+                            <button onclick="deleteUserAccess(${u.id})" style="background: #dc2626; color: #fff; border: none; padding: 0.25rem 0.55rem; border-radius: 0.35rem; font-size: 0.75rem; font-weight: 700; cursor: pointer;">🗑️ Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    } catch (err) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; color: #fca5a5; padding: 1rem;">⚠️ Error loading user list.</td>
+            </tr>
+        `;
+    }
+}
+
+async function approveUserAccess(id) {
+    try {
+        const res = await fetch(`/api/user-access/users/${id}/approve`, { method: 'POST' });
+        if (res.ok) {
+            await loadUserAccessList();
+        } else {
+            alert('⚠️ Failed to approve user.');
+        }
+    } catch (err) {
+        alert('⚠️ Connection error approving user.');
+    }
+}
+
+async function togglePauseUserAccess(id) {
+    try {
+        const res = await fetch(`/api/user-access/users/${id}/pause`, { method: 'POST' });
+        if (res.ok) {
+            await loadUserAccessList();
+        } else {
+            alert('⚠️ Failed to update user status.');
+        }
+    } catch (err) {
+        alert('⚠️ Connection error.');
+    }
+}
+
+async function deleteUserAccess(id) {
+    if (!confirm('Are you sure you want to permanently delete/revoke this user?')) return;
+    try {
+        const res = await fetch(`/api/user-access/users/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            await loadUserAccessList();
+        } else {
+            alert('⚠️ Failed to delete user.');
+        }
+    } catch (err) {
+        alert('⚠️ Connection error deleting user.');
+    }
+}
+
+// Bind functions to window object for HTML onclick handlers
+window.openUserAccessModal = openUserAccessModal;
+window.saveAccessSettings = saveAccessSettings;
+window.loadUserAccessList = loadUserAccessList;
+window.approveUserAccess = approveUserAccess;
+window.togglePauseUserAccess = togglePauseUserAccess;
+window.deleteUserAccess = deleteUserAccess;
+
+// Real-Time Auto-Logout Poller for Regular Users (Checks operating hours & access status every 4 seconds)
+setInterval(async () => {
+    const userRoleBadge = document.getElementById('loggedInUser')?.textContent || '';
+    if (userRoleBadge.includes('User')) {
+        try {
+            const res = await fetch('/api/user-access/verify-session');
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.allowed === false) {
+                    alert(`⏰ ${data.message || 'Market operating hours closed. Logging out now...'}`);
+                    localStorage.removeItem('pb_user_phone');
+                    localStorage.removeItem('pb_user_name');
+                    window.location.href = '/logout';
+                }
+            }
+        } catch (e) {
+            console.warn('Session verification check error:', e);
+        }
+    }
+}, 4000);
+
+
+
 
 

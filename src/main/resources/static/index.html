@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pune Bazar - Automatic WhatsApp Calculator & Ledger System</title>
+    <title>Receipt Generator - Calculator & Ledger System</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,14 +14,17 @@
     <!-- Top Navigation Bar -->
     <header class="navbar">
         <div class="brand">
-            <span class="brand-logo">🚩</span>
+            <span class="brand-logo">🧾</span>
             <div class="brand-text">
-                <h2>PUNE BAZAR</h2>
-                <p>Automatic WhatsApp Calculator & Market Ledger System</p>
+                <h2>RECEIPT GENERATOR</h2>
+                <p>Automatic Calculation & Receipt System</p>
             </div>
         </div>
 
         <div class="nav-actions" style="display: flex; align-items: center; gap: 0.75rem;">
+            <button id="btnOpenUserAccess" onclick="openUserAccessModal()" style="display: none; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; border: none; padding: 0.4rem 0.85rem; border-radius: 0.65rem; font-weight: 700; font-size: 0.82rem; cursor: pointer; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
+                👥 User Access Control
+            </button>
             <div class="global-date-container" style="display: flex; align-items: center; gap: 0.4rem; background: rgba(15, 23, 42, 0.85); padding: 0.35rem 0.75rem; border-radius: 0.65rem; border: 1.5px solid rgba(56, 189, 248, 0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
                 <label for="globalDatePicker" style="font-size: 0.8rem; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 0.35rem; white-space: nowrap;">
                     📅 View Date:
@@ -31,7 +34,7 @@
             <div class="user-badge">
                 <span>👤 Logged in as: <strong id="loggedInUser">Admin</strong></span>
             </div>
-            <a href="/logout" class="btn-logout">🚪 Logout</a>
+            <a href="/logout" class="btn-logout" id="navLogoutBtn">🚪 Logout</a>
         </div>
     </header>
 
@@ -600,6 +603,8 @@
                 <button onclick="closeModal('weeklyEditModal')" class="btn-secondary" style="flex: 1;">Cancel</button>
             </div>
         </div>
+    </div>
+
     <!-- Registered Markets List Modal -->
     <div id="marketsModal" class="modal-overlay">
         <div class="modal-card" style="max-width: 480px;">
@@ -621,6 +626,74 @@
 
             <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end;">
                 <button onclick="closeModal('marketsModal')" class="btn-secondary" style="padding: 0.5rem 1.25rem; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border-card); color: var(--text-main); border-radius: 0.75rem; cursor: pointer; font-weight: 600;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin User Access Management Modal -->
+    <div id="userAccessModal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 720px;">
+            <div class="modal-header">
+                <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.6rem; color: #38bdf8;">
+                    <span style="font-size: 1.4rem;">👥</span> User Access & Operating Hours Control
+                </h3>
+                <button class="close-btn" onclick="closeModal('userAccessModal')">&times;</button>
+            </div>
+
+            <!-- Operating Hours & Common Password Settings Panel -->
+            <div style="background: rgba(15, 23, 42, 0.95); border: 1.5px solid rgba(56, 189, 248, 0.3); border-radius: 0.85rem; padding: 1rem; margin-bottom: 1.25rem;">
+                <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: #fbbf24; display: flex; align-items: center; gap: 0.4rem;">
+                    ⏰ Set Global Market View Operating Hours
+                </h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.65rem; align-items: end;">
+                    <div>
+                        <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 0.25rem; font-weight: 600;">Start Time (24h):</label>
+                        <input type="time" id="settingStartTime" class="form-control" value="00:00" style="padding: 0.4rem 0.5rem; font-size: 0.85rem;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 0.25rem; font-weight: 600;">End Time (24h):</label>
+                        <input type="time" id="settingEndTime" class="form-control" value="18:00" style="padding: 0.4rem 0.5rem; font-size: 0.85rem;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 0.25rem; font-weight: 600;">Common User Pass:</label>
+                        <input type="text" id="settingCommonPass" class="form-control" value="123456" style="padding: 0.4rem 0.5rem; font-size: 0.85rem; font-weight: 700; color: #34d399;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.78rem; color: #fbbf24; display: block; margin-bottom: 0.25rem; font-weight: 700;">🔑 Admin Password:</label>
+                        <input type="text" id="settingAdminPass" class="form-control" value="456B@POONA" style="padding: 0.4rem 0.5rem; font-size: 0.85rem; font-weight: 800; color: #fbbf24; border-color: #fbbf24;">
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; margin-top: 0.85rem;">
+                    <button onclick="saveAccessSettings()" class="btn-primary" style="padding: 0.45rem 1rem; font-size: 0.82rem; border-radius: 0.55rem;">💾 Save All Settings</button>
+                </div>
+            </div>
+
+            <!-- User Approval & Status Management Table -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem;">
+                <h4 style="margin: 0; font-size: 0.95rem; color: #f8fafc;">📋 User Access Requests & Approvals</h4>
+                <button onclick="loadUserAccessList()" style="background: rgba(255, 255, 255, 0.08); color: #7dd3fc; border: 1px solid rgba(255, 255, 255, 0.15); padding: 0.25rem 0.65rem; border-radius: 0.45rem; font-size: 0.78rem; cursor: pointer;">🔄 Refresh Users</button>
+            </div>
+
+            <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.83rem;">
+                    <thead>
+                        <tr style="border-bottom: 1.5px solid var(--border-card); text-align: left; color: #94a3b8;">
+                            <th style="padding: 0.5rem;">User Name</th>
+                            <th style="padding: 0.5rem;">Phone Number</th>
+                            <th style="padding: 0.5rem;">Status</th>
+                            <th style="padding: 0.5rem; text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userAccessTableBody">
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1rem;">Loading user access list...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end;">
+                <button onclick="closeModal('userAccessModal')" class="btn-secondary" style="padding: 0.5rem 1.25rem; border-radius: 0.75rem;">Close</button>
             </div>
         </div>
     </div>

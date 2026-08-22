@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - Pune Bazar WhatsApp Calculator & Ledger System</title>
+    <title>Receipt Generator - Universal Access Portal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -19,23 +19,23 @@
             padding: 1rem;
         }
         .login-card {
-            background: rgba(15, 23, 42, 0.75);
+            background: rgba(15, 23, 42, 0.85);
             backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1.5px solid rgba(56, 189, 248, 0.25);
             border-radius: 1.5rem;
-            padding: 2.5rem;
+            padding: 2.25rem;
             width: 100%;
             max-width: 440px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
             color: #f8fafc;
         }
         .brand-header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1.75rem;
         }
         .brand-icon {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
+            font-size: 2.75rem;
+            margin-bottom: 0.25rem;
             display: inline-block;
         }
         .brand-title {
@@ -48,28 +48,42 @@
         }
         .brand-sub {
             color: #94a3b8;
-            font-size: 0.875rem;
+            font-size: 0.85rem;
             margin-top: 0.25rem;
+        }
+        .alert-box {
+            padding: 0.85rem 1rem;
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            margin-bottom: 1.25rem;
+            text-align: center;
+            line-height: 1.4;
+            display: none;
         }
         .alert-error {
             background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
+            border: 1.5px solid rgba(239, 68, 68, 0.35);
             color: #fca5a5;
-            padding: 0.75rem 1rem;
-            border-radius: 0.75rem;
-            font-size: 0.875rem;
-            margin-bottom: 1.5rem;
-            text-align: center;
+        }
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1.5px solid rgba(245, 158, 11, 0.35);
+            color: #fde047;
+        }
+        .alert-info {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1.5px solid rgba(56, 189, 248, 0.35);
+            color: #7dd3fc;
         }
         .form-group {
-            margin-bottom: 1.25rem;
+            margin-bottom: 1.15rem;
         }
         .form-group label {
             display: block;
-            font-size: 0.875rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: #cbd5e1;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
         }
         .form-control {
             width: 100%;
@@ -78,44 +92,41 @@
             background: rgba(30, 41, 59, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: #ffffff;
-            font-size: 1rem;
+            font-size: 0.95rem;
             outline: none;
             transition: all 0.2s ease;
             box-sizing: border-box;
         }
         .form-control:focus {
-            border-color: #34d399;
-            box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
         }
         .btn-submit {
             width: 100%;
-            padding: 0.875rem;
+            padding: 0.85rem;
             border: none;
             border-radius: 0.75rem;
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             color: #ffffff;
             font-size: 1rem;
             font-weight: 700;
             cursor: pointer;
             transition: transform 0.15s ease, box-shadow 0.15s ease;
-            margin-top: 1rem;
+            margin-top: 0.75rem;
         }
         .btn-submit:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 10px 20px -5px rgba(2, 132, 199, 0.4);
         }
-        .demo-hint {
+        .hours-badge {
             margin-top: 1.5rem;
-            padding: 1rem;
+            padding: 0.75rem;
             background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 0.75rem;
-            font-size: 0.8125rem;
+            font-size: 0.8rem;
             color: #94a3b8;
             text-align: center;
-        }
-        .demo-hint code {
-            color: #34d399;
-            font-weight: 700;
         }
     </style>
 </head>
@@ -123,40 +134,107 @@
 
     <div class="login-card">
         <div class="brand-header">
-            <div class="brand-icon">🚩</div>
-            <h1 class="brand-title">PUNE BAZAR</h1>
-            <p class="brand-sub">WhatsApp Calculator & Ledger SaaS System</p>
+            <div class="brand-icon">🧾</div>
+            <h1 class="brand-title">RECEIPT GENERATOR</h1>
+            <p class="brand-sub">Daily Calculation & Access System</p>
         </div>
 
-        <div id="errorMessage" class="alert-error" style="display: none;">
-            ⚠️ Invalid Admin Credentials. Please check username and password.
-        </div>
+        <div id="alertBox" class="alert-box"></div>
 
-        <form action="/login" method="POST">
+        <!-- UNIVERSAL SINGLE LOGIN FORM -->
+        <form id="universalLoginForm" onsubmit="handleUniversalLogin(event)">
             <div class="form-group">
-                <label for="username">Admin Username</label>
-                <input type="text" id="username" name="username" class="form-control" placeholder="Enter username" required value="admin">
+                <label for="userName">Full Name *</label>
+                <input type="text" id="userName" class="form-control" placeholder="Enter full name" required>
             </div>
 
             <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" class="form-control" placeholder="Enter password" required value="admin123">
+                <label for="userPhone">Mobile Number *</label>
+                <input type="tel" id="userPhone" class="form-control" placeholder="e.g. 9876543210" required>
             </div>
 
-            <button type="submit" class="btn-submit">🔐 Secure Admin Login</button>
+            <div class="form-group">
+                <label for="userPassword">Access Password *</label>
+                <input type="password" id="userPassword" class="form-control" placeholder="Enter access password" required>
+            </div>
+
+            <button type="submit" class="btn-submit" id="btnSubmit">🚀 Open Market View</button>
         </form>
 
-        <div class="demo-hint">
-            💡 Default Admin Access:<br>
-            Username: <code>admin</code> &nbsp;|&nbsp; Password: <code>admin123</code>
+        <div class="hours-badge" id="operatingHoursBadge">
+            ⏰ Allowed Operating Hours: <strong style="color: #38bdf8;" id="hoursRangeText">Loading...</strong>
         </div>
     </div>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('error')) {
-            document.getElementById('errorMessage').style.display = 'block';
+        async function fetchSettings() {
+            try {
+                const res = await fetch('/api/user-access/settings');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('hoursRangeText').textContent = `${data.startTime || '00:00'} to ${data.endTime || '18:00'}`;
+                }
+            } catch (err) {
+                document.getElementById('hoursRangeText').textContent = '12:00 AM to 06:00 PM';
+            }
         }
+
+        function showAlert(msg, type = 'error') {
+            const box = document.getElementById('alertBox');
+            box.className = `alert-box alert-${type}`;
+            box.innerHTML = msg;
+            box.style.display = 'block';
+        }
+
+        async function handleUniversalLogin(e) {
+            e.preventDefault();
+            document.getElementById('alertBox').style.display = 'none';
+            const btn = document.getElementById('btnSubmit');
+            btn.disabled = true;
+            btn.textContent = 'Verifying Access... ⏳';
+
+            const name = document.getElementById('userName').value.trim();
+            const phone = document.getElementById('userPhone').value.trim();
+            const password = document.getElementById('userPassword').value.trim();
+
+            try {
+                const res = await fetch('/api/user-access/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, phone, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    if (data.role === 'ADMIN') {
+                        localStorage.setItem('pb_user_name', name || 'Admin');
+                        localStorage.setItem('pb_user_role', 'ADMIN');
+                    } else {
+                        localStorage.setItem('pb_user_phone', phone);
+                        localStorage.setItem('pb_user_name', name);
+                        localStorage.setItem('pb_user_role', 'USER');
+                    }
+                    window.location.href = '/index.html';
+                } else {
+                    if (data.status === 'PENDING') {
+                        showAlert('⏳ <strong>Access Request Submitted!</strong><br>Your account is waiting for One-Time Admin Approval. Please notify Admin.', 'warning');
+                    } else if (data.status === 'PAUSED') {
+                        showAlert('⏸️ <strong>Access Paused!</strong><br>Your account is currently paused by Admin. Contact Admin to resume access.', 'warning');
+                    } else if (data.status === 'OUTSIDE_WINDOW') {
+                        showAlert(`⏰ <strong>Market Closed!</strong><br>${data.error}`, 'info');
+                    } else {
+                        showAlert(`⚠️ ${data.error || 'Login Failed'}`, 'error');
+                    }
+                }
+            } catch (err) {
+                showAlert('⚠️ Connection error. Please check server connection.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 Open Market View';
+            }
+        }
+
+        fetchSettings();
     </script>
 </body>
 </html>
