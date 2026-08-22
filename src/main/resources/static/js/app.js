@@ -3012,26 +3012,28 @@ window.approveUserAccess = approveUserAccess;
 window.togglePauseUserAccess = togglePauseUserAccess;
 window.deleteUserAccess = deleteUserAccess;
 
-// Real-Time Auto-Logout Poller for Regular Users (Checks operating hours & access status every 4 seconds)
+// Real-Time Auto-Logout Poller for Regular Users (Checks operating hours & access status every 3 seconds)
 setInterval(async () => {
     const userRoleBadge = document.getElementById('loggedInUser')?.textContent || '';
-    if (userRoleBadge.includes('User')) {
+    const storedRole = localStorage.getItem('pb_user_role');
+    
+    // Polling triggers for any user that is not Admin
+    if (!userRoleBadge.includes('(Admin)') && storedRole !== 'ADMIN') {
         try {
             const res = await fetch('/api/user-access/verify-session');
             if (res.ok) {
                 const data = await res.json();
                 if (data && data.allowed === false) {
                     alert(`⏰ ${data.message || 'Market operating hours closed. Logging out now...'}`);
-                    localStorage.removeItem('pb_user_phone');
-                    localStorage.removeItem('pb_user_name');
-                    window.location.href = '/logout';
+                    localStorage.clear();
+                    window.location.href = '/login.html?logout=true';
                 }
             }
         } catch (e) {
             console.warn('Session verification check error:', e);
         }
     }
-}, 4000);
+}, 3000);
 
 
 

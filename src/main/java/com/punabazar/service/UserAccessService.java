@@ -7,6 +7,7 @@ import com.punabazar.repository.SystemSettingRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +22,7 @@ public class UserAccessService {
     public static final String KEY_COMMON_PASS = "COMMON_USER_PASSWORD";
     public static final String KEY_ADMIN_PASS = "ADMIN_PASSWORD";
     public static final String DEFAULT_ADMIN_PASS = "456B@POONA";
+    public static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
 
     private final AppUserRepository userRepository;
     private final SystemSettingRepository settingRepository;
@@ -75,7 +77,7 @@ public class UserAccessService {
 
             LocalTime start = parseTimeFlexible(startStr, LocalTime.of(0, 0));
             LocalTime end = parseTimeFlexible(endStr, LocalTime.of(18, 0));
-            LocalTime now = LocalTime.now();
+            LocalTime now = LocalTime.now(INDIA_ZONE);
 
             if (start.equals(end)) {
                 return true; // 24-hour open
@@ -180,7 +182,7 @@ public class UserAccessService {
             return response;
         }
 
-        // Check Operating Time Window
+        // Check Operating Time Window (IST Zone)
         if (!isCurrentTimeWithinWindow()) {
             String startStr = getSetting(KEY_START_TIME, "00:00");
             String endStr = getSetting(KEY_END_TIME, "18:00");
