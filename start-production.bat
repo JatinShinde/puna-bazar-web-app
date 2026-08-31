@@ -8,7 +8,7 @@ if not exist "target\puna-bazar-app-1.0.0.jar" (
     call mvnw.cmd clean package -DskipTests
 )
 echo.
-echo Launching Application on http://localhost:8085 ...
+echo Launching Application on http://localhost:8086 ...
 echo Database File Location: ./data/punabazardb.mv.db
 echo Press Ctrl+C to stop server.
 echo.

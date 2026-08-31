@@ -16,6 +16,11 @@ public class WeeklyReceiptDTO {
     private BigDecimal sundayNet;
     private BigDecimal weeklyTotalNet;
     private String weeklyTotalStatus; // YENE or DENE
+    private BigDecimal finalReceiptNet;
+    private String finalReceiptStatus;
+    private Boolean pagarEnabled;
+    private BigDecimal pagar;
+    private BigDecimal shareRate;
     private String formattedWeeklyMessage;
 
     public WeeklyReceiptDTO() {}
@@ -24,6 +29,8 @@ public class WeeklyReceiptDTO {
                             BigDecimal mondayNet, BigDecimal tuesdayNet, BigDecimal wednesdayNet,
                             BigDecimal thursdayNet, BigDecimal fridayNet, BigDecimal saturdayNet,
                             BigDecimal sundayNet, BigDecimal weeklyTotalNet, String weeklyTotalStatus,
+                            BigDecimal finalReceiptNet, String finalReceiptStatus,
+                            Boolean pagarEnabled, BigDecimal pagar, BigDecimal shareRate,
                             String formattedWeeklyMessage) {
         this.customerId = customerId;
         this.customerName = customerName;
@@ -38,6 +45,11 @@ public class WeeklyReceiptDTO {
         this.sundayNet = sundayNet != null ? sundayNet : BigDecimal.ZERO;
         this.weeklyTotalNet = weeklyTotalNet != null ? weeklyTotalNet : BigDecimal.ZERO;
         this.weeklyTotalStatus = weeklyTotalStatus != null ? weeklyTotalStatus : "YENE";
+        this.finalReceiptNet = finalReceiptNet != null ? finalReceiptNet : this.weeklyTotalNet;
+        this.finalReceiptStatus = finalReceiptStatus != null ? finalReceiptStatus : this.weeklyTotalStatus;
+        this.pagarEnabled = pagarEnabled;
+        this.pagar = pagar != null ? pagar : BigDecimal.ZERO;
+        this.shareRate = shareRate != null ? shareRate : new BigDecimal("100.00");
         this.formattedWeeklyMessage = formattedWeeklyMessage;
     }
 
@@ -79,6 +91,21 @@ public class WeeklyReceiptDTO {
 
     public String getWeeklyTotalStatus() { return weeklyTotalStatus; }
     public void setWeeklyTotalStatus(String weeklyTotalStatus) { this.weeklyTotalStatus = weeklyTotalStatus; }
+
+    public BigDecimal getFinalReceiptNet() { return finalReceiptNet; }
+    public void setFinalReceiptNet(BigDecimal finalReceiptNet) { this.finalReceiptNet = finalReceiptNet; }
+
+    public String getFinalReceiptStatus() { return finalReceiptStatus; }
+    public void setFinalReceiptStatus(String finalReceiptStatus) { this.finalReceiptStatus = finalReceiptStatus; }
+
+    public Boolean getPagarEnabled() { return pagarEnabled; }
+    public void setPagarEnabled(Boolean pagarEnabled) { this.pagarEnabled = pagarEnabled; }
+
+    public BigDecimal getPagar() { return pagar; }
+    public void setPagar(BigDecimal pagar) { this.pagar = pagar; }
+
+    public BigDecimal getShareRate() { return shareRate; }
+    public void setShareRate(BigDecimal shareRate) { this.shareRate = shareRate; }
 
     public String getFormattedWeeklyMessage() { return formattedWeeklyMessage; }
     public void setFormattedWeeklyMessage(String formattedWeeklyMessage) { this.formattedWeeklyMessage = formattedWeeklyMessage; }

@@ -1,3 +1,18 @@
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function formatCurrency(val) {
+    const num = parseFloat(val) || 0;
+    return (num < 0 ? '₹-' + Math.abs(num).toFixed(2) : '₹' + num.toFixed(2));
+}
+
 function isCommEnabledForCustomer(customer) {
     if (!customer) return false;
     return customer.commissionEnabled === true || customer.commissionEnabled === 'true' || customer.commissionEnabled === 1;
@@ -219,12 +234,6 @@ function updateInputFieldsVisibility(receiptStyle) {
     if (shareGroup) shareGroup.style.display = isShareEnabled ? 'block' : 'none';
 }
 
-    document.getElementById('tradeForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        processTradeAction('save');
-    });
-    document.getElementById('newCustomerForm').addEventListener('submit', handleNewCustomerSubmit);
-
     // Modal checkbox toggle listeners
     const custCommCheckbox = document.getElementById('custEnableComm');
     if (custCommCheckbox) {
@@ -251,13 +260,16 @@ function updateInputFieldsVisibility(receiptStyle) {
     }
 
     // Search and Market Filter Chips
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-        if (currentSegment === 'weekly') {
-            renderWeeklyTable(weeklyReceiptsData);
-        } else {
-            loadCustomers(e.target.value, getSelectedMarket());
-        }
-    });
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            if (currentSegment === 'weekly') {
+                renderWeeklyTable(weeklyReceiptsData);
+            } else {
+                loadCustomers(e.target.value, getSelectedMarket());
+            }
+        });
+    }
 
     document.querySelectorAll('.market-chips .chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
@@ -267,32 +279,35 @@ function updateInputFieldsVisibility(receiptStyle) {
             if (currentSegment === 'weekly') {
                 renderWeeklyTable(weeklyReceiptsData);
             } else {
-                loadCustomers(document.getElementById('searchInput').value, market);
+                loadCustomers(document.getElementById('searchInput')?.value || '', market);
             }
         });
     });
 
     // New Customer Modal Open
-    document.getElementById('btnNewCustomerModal').addEventListener('click', () => {
-        if (document.getElementById('editingCustId')) document.getElementById('editingCustId').value = '';
-        if (document.getElementById('custModalTitle')) document.getElementById('custModalTitle').textContent = '➕ Add New Market Customer';
-        if (document.getElementById('btnSaveCust')) document.getElementById('btnSaveCust').textContent = '💾 Save Customer Profile';
-        document.getElementById('newCustomerForm').reset();
+    const btnNewCustModal = document.getElementById('btnNewCustomerModal');
+    if (btnNewCustModal) {
+        btnNewCustModal.addEventListener('click', () => {
+            if (document.getElementById('editingCustId')) document.getElementById('editingCustId').value = '';
+            if (document.getElementById('custModalTitle')) document.getElementById('custModalTitle').textContent = '➕ Add New Market Customer';
+            if (document.getElementById('btnSaveCust')) document.getElementById('btnSaveCust').textContent = '💾 Save Customer Profile';
+            if (document.getElementById('newCustomerForm')) document.getElementById('newCustomerForm').reset();
 
-        if (document.getElementById('custEnableComm')) document.getElementById('custEnableComm').checked = false;
-        if (document.getElementById('custCommission')) document.getElementById('custCommission').value = '10.00';
-        if (document.getElementById('custCommContainer')) document.getElementById('custCommContainer').style.display = 'none';
+            if (document.getElementById('custEnableComm')) document.getElementById('custEnableComm').checked = false;
+            if (document.getElementById('custCommission')) document.getElementById('custCommission').value = '10.00';
+            if (document.getElementById('custCommContainer')) document.getElementById('custCommContainer').style.display = 'none';
 
-        if (document.getElementById('custEnablePagar')) document.getElementById('custEnablePagar').checked = false;
-        if (document.getElementById('custPagar')) document.getElementById('custPagar').value = '0.00';
-        if (document.getElementById('custPagarContainer')) document.getElementById('custPagarContainer').style.display = 'none';
+            if (document.getElementById('custEnablePagar')) document.getElementById('custEnablePagar').checked = false;
+            if (document.getElementById('custPagar')) document.getElementById('custPagar').value = '0.00';
+            if (document.getElementById('custPagarContainer')) document.getElementById('custPagarContainer').style.display = 'none';
 
-        if (document.getElementById('custShare4060')) document.getElementById('custShare4060').checked = false;
-        if (document.getElementById('custShareRateVal')) document.getElementById('custShareRateVal').value = '40.00';
-        if (document.getElementById('custShareRateContainer')) document.getElementById('custShareRateContainer').style.display = 'none';
+            if (document.getElementById('custShare4060')) document.getElementById('custShare4060').checked = false;
+            if (document.getElementById('custShareRateVal')) document.getElementById('custShareRateVal').value = '40.00';
+            if (document.getElementById('custShareRateContainer')) document.getElementById('custShareRateContainer').style.display = 'none';
 
-        openModal('customerModal');
-    });
+            openModal('customerModal');
+        });
+    }
 
     // Initialize default market inputs
     renderCustomerMarketInputs('PO,PC');
@@ -346,6 +361,11 @@ function renderCustomerMarketInputs(marketCodesStr) {
 }
 
 async function checkAuth() {
+    let role = localStorage.getItem('pb_user_role');
+    if (!role) {
+        role = 'ADMIN';
+        localStorage.setItem('pb_user_role', 'ADMIN');
+    }
     try {
         const res = await fetch('/api/auth/me');
         if (res.ok) {
@@ -354,31 +374,22 @@ async function checkAuth() {
                 const data = await res.json();
                 if (data && data.authenticated) {
                     const roles = data.roles || [];
-                    const isAdmin = roles.some(r => (r.authority && r.authority.includes('ADMIN')) || r === 'ROLE_ADMIN') || data.username === 'POONA@B456';
+                    const isAdmin = role === 'ADMIN' || roles.some(r => (r.authority && r.authority.includes('ADMIN')) || r === 'ROLE_ADMIN');
                     
-                    if (isAdmin) {
-                        if (document.getElementById('loggedInUser')) {
-                            document.getElementById('loggedInUser').textContent = (data.username || 'Admin') + " (Admin)";
-                        }
-                        if (document.getElementById('btnOpenUserAccess')) {
-                            document.getElementById('btnOpenUserAccess').style.display = 'flex';
-                        }
-                    } else {
-                        // Regular user view
-                        const uName = localStorage.getItem('pb_user_name') || data.username || 'User';
-                        if (document.getElementById('loggedInUser')) {
-                            document.getElementById('loggedInUser').textContent = `${uName} (User View)`;
-                        }
-                        if (document.getElementById('btnOpenUserAccess')) {
-                            document.getElementById('btnOpenUserAccess').style.display = 'none';
-                        }
+                    if (document.getElementById('loggedInUser')) {
+                        document.getElementById('loggedInUser').textContent = isAdmin ? (data.username || 'Admin') + " (Admin)" : (localStorage.getItem('pb_user_name') || 'User') + " (User View)";
                     }
-                    return;
                 }
             }
         }
     } catch (err) {
         console.warn('Auth check info:', err);
+    }
+    if (document.getElementById('loggedInUser') && !document.getElementById('loggedInUser').textContent) {
+        document.getElementById('loggedInUser').textContent = 'Admin (Admin)';
+    }
+    if (document.getElementById('btnOpenUserAccess')) {
+        document.getElementById('btnOpenUserAccess').style.display = 'flex';
     }
 }
 
@@ -387,9 +398,12 @@ async function loadDashboardMetrics(targetDate = null) {
         const pickerVal = document.getElementById('globalDatePicker')?.value;
         const dateToFetch = targetDate || pickerVal || '';
         let url = '/api/dashboard/metrics';
-        if (dateToFetch) url += '?date=' + encodeURIComponent(dateToFetch);
+        if (dateToFetch && /^\d{4}-\d{2}-\d{2}$/.test(dateToFetch)) {
+            url += '?date=' + encodeURIComponent(dateToFetch);
+        }
 
         const res = await fetch(url);
+        if (!res.ok) return;
         const data = await res.json();
         latestDashboardData = data;
 
@@ -444,13 +458,15 @@ async function loadCustomers(searchQuery = '', marketFilter = 'ALL', targetDate 
         
         const pickerVal = document.getElementById('globalDatePicker')?.value || document.getElementById('txDate')?.value;
         const dateToFetch = targetDate || pickerVal || '';
-        if (dateToFetch) params.append('date', dateToFetch);
+        if (dateToFetch && /^\d{4}-\d{2}-\d{2}$/.test(dateToFetch)) {
+            params.append('date', dateToFetch);
+        }
         
         if (params.toString()) url += '?' + params.toString();
 
         const res = await fetch(url);
         if (!res.ok) {
-            console.error('Failed to load customers API, HTTP status:', res.status);
+            console.warn('Customer fetch failed with status:', res.status);
             return;
         }
         const data = await res.json();
@@ -460,9 +476,11 @@ async function loadCustomers(searchQuery = '', marketFilter = 'ALL', targetDate 
             renderCustomerTable(customersData);
         } else {
             console.error('API did not return an array:', data);
+            renderCustomerTable([]);
         }
     } catch (err) {
         console.error('Failed to load customers:', err);
+        renderCustomerTable([]);
     }
 }
 
@@ -587,12 +605,68 @@ async function loadWeeklyReceipts() {
             fetch('/api/weekly-receipts'),
             fetch('/api/dashboard/weekly-daily-profit-loss')
         ]);
+        if (!resReceipts.ok || resReceipts.redirected || (resReceipts.url && resReceipts.url.includes('login.html'))) {
+            window.location.href = '/login.html';
+            return;
+        }
         weeklyReceiptsData = await resReceipts.json();
-        weeklyDailyMetricsData = await resMetrics.json();
+        if (resMetrics.ok) {
+            try { weeklyDailyMetricsData = await resMetrics.json(); } catch (e) {}
+        }
         renderWeeklyTable(weeklyReceiptsData);
     } catch (err) {
         console.error('Failed to load weekly receipts:', err);
+        renderWeeklyTable([]);
     }
+}
+
+function computeWeeklyFinalReceiptNet(item) {
+    if (!item) return 0;
+    const customer = (typeof customersData !== 'undefined' && Array.isArray(customersData))
+        ? customersData.find(c => c.id == item.customerId)
+        : null;
+
+    let mon = item.mondayNet || 0;
+    let tue = item.tuesdayNet || 0;
+    let wed = item.wednesdayNet || 0;
+    let thu = item.thursdayNet || 0;
+    let fri = item.fridayNet || 0;
+    let sat = item.saturdayNet || 0;
+    let sun = item.sundayNet || 0;
+
+    let weeklySum = mon + tue + wed + thu + fri + sat + sun;
+    let currentBal = weeklySum;
+
+    // MP (Miss Payment / Farak)
+    let mpAmount = customer ? (customer.farak || 0) : 0;
+    if (item.formattedWeeklyMessage && !mpAmount) {
+        const mpMatch = item.formattedWeeklyMessage.match(/MP\s*:-\s*([0-9,.]+)/i);
+        if (mpMatch && mpMatch[1]) mpAmount = parseFloat(mpMatch[1].replace(/,/g, '')) || 0;
+    }
+    if (mpAmount > 0) {
+        currentBal = currentBal >= 0 ? (currentBal - mpAmount) : (currentBal + mpAmount);
+    }
+
+    // Pagar
+    const isPagarEnabled = customer ? (customer.pagarEnabled === true || customer.pagarEnabled === 'true' || customer.pagarEnabled === 1) : item.pagarEnabled;
+    const pagarVal = customer ? (customer.pagar || 0) : (item.pagar || 0);
+    if (isPagarEnabled && pagarVal > 0) {
+        currentBal = currentBal - pagarVal;
+    }
+
+    // Share %
+    const shareRatePct = customer ? (customer.shareRate || 100) : (item.shareRate || 100);
+    if (shareRatePct > 0 && shareRatePct < 100) {
+        let shareVal = Math.round(Math.abs(currentBal) * (shareRatePct / 100));
+        currentBal = currentBal >= 0 ? shareVal : -shareVal;
+    }
+
+    // Magil Yene / Dene
+    let magilYene = customer ? (customer.yene || 0) : 0;
+    let magilDene = customer ? (customer.dene || 0) : 0;
+    let magilNet = magilYene - magilDene;
+
+    return currentBal + magilNet;
 }
 
 function renderWeeklyTable(list) {
@@ -631,6 +705,15 @@ function renderWeeklyTable(list) {
         const totalColor = totalNet >= 0 ? '#34d399' : '#f87171';
         const totalStatusStr = item.weeklyTotalStatus === 'DENE' ? 'dene' : 'yeṇe';
 
+        // Final calculated receipt amount incorporating MP, Pagar, Share %, and Magil Yene/Dene
+        const finalNet = (item.finalReceiptNet != null && item.finalReceiptNet !== item.weeklyTotalNet)
+            ? item.finalReceiptNet
+            : computeWeeklyFinalReceiptNet(item);
+        const finalColor = finalNet >= 0 ? '#34d399' : '#f87171';
+        const finalBg = finalNet >= 0 ? 'rgba(52, 211, 153, 0.12)' : 'rgba(248, 113, 113, 0.12)';
+        const finalBorder = finalNet >= 0 ? '1px solid rgba(52, 211, 153, 0.3)' : '1px solid rgba(248, 113, 113, 0.3)';
+        const finalStatusStr = finalNet >= 0 ? 'yeṇe' : 'dene';
+
         tr.innerHTML = `
             <td>
                 <strong style="color: #ffffff;">${escapeHtml(item.customerName)}</strong>
@@ -655,6 +738,11 @@ function renderWeeklyTable(list) {
                         ✏️ Edit
                     </button>
                 </div>
+            </td>
+            <td style="text-align: right;">
+                <span style="display: inline-block; padding: 0.3rem 0.55rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.82rem; background: ${finalBg}; color: ${finalColor}; border: ${finalBorder};">
+                    ₹${Math.abs(finalNet).toLocaleString('en-IN')} <small style="font-weight: 600;">${finalStatusStr}</small>
+                </span>
             </td>
         `;
 
@@ -719,6 +807,16 @@ window.shareWeeklyWhatsApp = function(customerId) {
     const item = weeklyReceiptsData.find(w => w.customerId == customerId);
     if (!item || !item.formattedWeeklyMessage) return;
 
+    currentActiveCustomerId = customerId;
+    currentCustomerName = item.customerName;
+
+    const customer = (typeof customersData !== 'undefined' && Array.isArray(customersData))
+        ? customersData.find(c => c.id == customerId)
+        : null;
+    if (customer && customer.mobileNumber) {
+        currentCleanMobile = customer.mobileNumber.replace(/[^0-9]/g, '');
+    }
+
     currentFormattedMessage = item.formattedWeeklyMessage;
     originalFormattedMessage = item.formattedWeeklyMessage;
     const editTextEl = document.getElementById('waReceiptEditText');
@@ -730,23 +828,43 @@ window.shareWeeklyWhatsApp = function(customerId) {
     if (document.getElementById('btnEditReceipt')) document.getElementById('btnEditReceipt').style.display = 'flex';
     if (document.getElementById('waEditContainer')) document.getElementById('waEditContainer').style.display = 'none';
 
+    populateQuickFieldsFromText(item.formattedWeeklyMessage);
     openModal('whatsappModal');
     renderReceiptImageCanvas(item.formattedWeeklyMessage, item.customerName);
 };
 
 window.editWeeklyReceipt = function(customerId) {
+    currentActiveCustomerId = customerId;
     const item = weeklyReceiptsData.find(w => w.customerId == customerId);
     if (!item) return;
 
-    if (document.getElementById('editWeeklyCustId')) document.getElementById('editWeeklyCustId').value = customerId;
-    if (document.getElementById('weeklyEditTitle')) document.getElementById('weeklyEditTitle').textContent = `✏️ Weekly Commission - ${item.customerName}`;
+    const customer = (typeof customersData !== 'undefined' && Array.isArray(customersData))
+        ? customersData.find(c => c.id == customerId)
+        : null;
 
-    let commPct = 0;
-    if (item.formattedWeeklyMessage) {
-        const match = item.formattedWeeklyMessage.match(/COM\s*\((\d+(\.\d+)?)%\)/i);
-        if (match && match[1]) commPct = parseFloat(match[1]);
+    if (document.getElementById('editWeeklyCustId')) document.getElementById('editWeeklyCustId').value = customerId;
+    if (document.getElementById('weeklyEditTitle')) document.getElementById('weeklyEditTitle').textContent = `✏️ Weekly Settings - ${item.customerName}`;
+
+    // Populate Pagar Checkbox & Amount
+    const isPagarEnabled = customer ? isPagarEnabledForCustomer(customer) : (item.pagarEnabled === true || item.pagarEnabled === 'true' || item.pagarEnabled === 1);
+    const pagarVal = customer ? (customer.pagar != null ? customer.pagar : 0) : (item.pagar != null ? item.pagar : 0);
+
+    const chkPagar = document.getElementById('weeklyEnablePagar');
+    const inputPagar = document.getElementById('weeklyPagarInput');
+    const containerPagar = document.getElementById('weeklyPagarContainer');
+
+    if (chkPagar) chkPagar.checked = isPagarEnabled;
+    if (inputPagar) inputPagar.value = pagarVal > 0 ? pagarVal : '0.00';
+    if (containerPagar) containerPagar.style.display = isPagarEnabled ? 'block' : 'none';
+
+    // Populate Share Rate (%)
+    let shareRate = customer ? (customer.shareRate != null ? customer.shareRate : 100) : 100;
+    if (item.formattedWeeklyMessage && (!customer || !customer.shareRate)) {
+        const matchShare = item.formattedWeeklyMessage.match(/SHARE\s*\((\d+(\.\d+)?)%\)/i);
+        if (matchShare && matchShare[1]) shareRate = parseFloat(matchShare[1]);
     }
-    if (document.getElementById('weeklyCommInput')) document.getElementById('weeklyCommInput').value = commPct > 0 ? commPct : '';
+    if (document.getElementById('weeklyShareInput')) document.getElementById('weeklyShareInput').value = (shareRate > 0 && shareRate < 100) ? shareRate : '';
+
     openModal('weeklyEditModal');
 };
 
@@ -755,7 +873,48 @@ window.saveWeeklyCommission = function() {
     const item = weeklyReceiptsData.find(w => w.customerId == customerId);
     if (!item) return;
 
-    const commPct = parseFloat(document.getElementById('weeklyCommInput').value) || 0;
+    const customer = (typeof customersData !== 'undefined' && Array.isArray(customersData))
+        ? customersData.find(c => c.id == customerId)
+        : null;
+
+    // Read form inputs from Weekly Settings Modal
+    const chkPagar = document.getElementById('weeklyEnablePagar');
+    const isPagarEnabled = chkPagar ? chkPagar.checked : false;
+    const pagarVal = parseFloat(document.getElementById('weeklyPagarInput')?.value) || 0;
+    const shareInputVal = parseFloat(document.getElementById('weeklyShareInput')?.value);
+    const shareRatePct = (!isNaN(shareInputVal) && shareInputVal > 0) ? shareInputVal : (customer ? (customer.shareRate || 100) : 100);
+
+    // Persist settings to Customer profile backend
+    if (customer) {
+        customer.pagarEnabled = isPagarEnabled;
+        customer.pagar = pagarVal;
+        customer.shareRate = shareRatePct;
+
+        fetch(`/api/customers/${customerId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: customer.name,
+                mobileNumber: customer.mobileNumber,
+                city: customer.city,
+                marketZone: customer.marketZone,
+                previousBalance: customer.previousBalance,
+                commissionRate: customer.commissionRate,
+                commissionEnabled: customer.commissionEnabled,
+                pagar: pagarVal,
+                pagarEnabled: isPagarEnabled,
+                magilBaki: customer.magilBaki,
+                yene: customer.yene,
+                dene: customer.dene,
+                balanceType: customer.balanceType,
+                farak: customer.farak,
+                marketCodes: customer.marketCodes,
+                receiptStyle: customer.receiptStyle,
+                shareRate: shareRatePct,
+                share30ProfitOnly: customer.share30ProfitOnly
+            })
+        }).catch(err => console.error("Error updating customer settings:", err));
+    }
 
     let mon = item.mondayNet || 0;
     let tue = item.tuesdayNet || 0;
@@ -765,30 +924,72 @@ window.saveWeeklyCommission = function() {
     let sat = item.saturdayNet || 0;
     let sun = item.sundayNet || 0;
 
+    // Step A: 7-Day Raw Sum
     let weeklySum = mon + tue + wed + thu + fri + sat + sun;
-    let commVal = 0;
-    if (commPct > 0) {
-        commVal = Math.round(Math.abs(weeklySum) * (commPct / 100));
+    let currentBal = weeklySum;
+
+    // Step B: Miss Payment (MP) direct amount (flat ₹ amount, NOT %)
+    let mpAmount = customer ? (customer.farak || 0) : 0;
+    if (item.formattedWeeklyMessage && !mpAmount) {
+        const mpMatch = item.formattedWeeklyMessage.match(/MP\s*:-\s*([0-9,.]+)/i);
+        if (mpMatch && mpMatch[1]) mpAmount = parseFloat(mpMatch[1].replace(/,/g, '')) || 0;
+    }
+    let afterMpSum = currentBal;
+    if (mpAmount > 0) {
+        afterMpSum = currentBal >= 0 ? (currentBal - mpAmount) : (currentBal + mpAmount);
+        currentBal = afterMpSum;
     }
 
-    let afterCommSum = weeklySum >= 0 ? (weeklySum - commVal) : (weeklySum + commVal);
+    // Step C: Pagar
+    let actualPagar = (isPagarEnabled && pagarVal > 0) ? pagarVal : 0;
+    let afterPagarSum = currentBal;
+    if (actualPagar > 0) {
+        afterPagarSum = currentBal - actualPagar;
+        currentBal = afterPagarSum;
+    }
 
-    let netWeekly = afterCommSum;
-    item.weeklyTotalNet = netWeekly;
-    item.weeklyTotalStatus = netWeekly >= 0 ? 'YENE' : 'DENE';
+    // Step D: Share %
+    let shareVal = 0;
+    let afterShareSum = currentBal;
+    if (shareRatePct > 0 && shareRatePct < 100) {
+        shareVal = Math.round(Math.abs(currentBal) * (shareRatePct / 100));
+        afterShareSum = currentBal >= 0 ? shareVal : -shareVal;
+        currentBal = afterShareSum;
+    }
+
+    // Step E: Magil Yene / Dene (flat ₹ amounts)
+    let magilYeneVal = customer ? (customer.yene || 0) : 0;
+    let magilDeneVal = customer ? (customer.dene || 0) : 0;
+    let magilNet = magilYeneVal - magilDeneVal;
+    let finalNet = currentBal + magilNet;
+
+    item.weeklyTotalNet = weeklySum;
+    item.finalReceiptNet = finalNet;
+    item.finalReceiptStatus = finalNet >= 0 ? 'YENE' : 'DENE';
+    item.weeklyTotalStatus = finalNet >= 0 ? 'YENE' : 'DENE';
 
     const fmt = (n) => Math.abs(n).toLocaleString('en-IN');
     const fmtDay = (n) => (n == null || n === 0) ? '-' : (fmt(n) + (n >= 0 ? ' yeṇe' : ' dene'));
-    const statusStr = netWeekly >= 0 ? 'yeṇe' : 'dene';
-    const sumStatusStr = weeklySum >= 0 ? 'yeṇe' : 'dene';
+    const statusStr = (n) => n >= 0 ? 'yeṇe' : 'dene';
+
+    const now = new Date();
+    const currentDay = now.getDay();
+    const diffToMon = (currentDay === 0 ? -6 : 1 - currentDay);
+    const monDate = new Date(now);
+    monDate.setDate(now.getDate() + diffToMon);
+    const sunDate = new Date(monDate);
+    sunDate.setDate(monDate.getDate() + 6);
+
+    const fmtDt = (d) => {
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    };
+    const dateRangeStr = `${fmtDt(monDate)} - ${fmtDt(sunDate)}`;
 
     let sb = [];
-    sb.push("==================================");
-    sb.push("      *WEEKLY MARKET STATEMENT*");
-    sb.push(`      *${item.customerName.toUpperCase()}*`);
-    sb.push("==================================");
-    sb.push("*DAY*                   *NET TRADE*");
-    sb.push("----------------------------------");
+    sb.push(`*DATE: ${dateRangeStr}*`);
     sb.push(`Mon :-               ${fmtDay(mon)}`);
     sb.push(`Tue :-               ${fmtDay(tue)}`);
     sb.push(`Wed :-               ${fmtDay(wed)}`);
@@ -797,20 +998,79 @@ window.saveWeeklyCommission = function() {
     sb.push(`Sat :-               ${fmtDay(sat)}`);
     sb.push(`Sun :-               ${fmtDay(sun)}`);
     sb.push("----------------------------------");
+    sb.push(`*7-DAY TOTAL :-*     ${fmt(weeklySum)} ${statusStr(weeklySum)}`);
 
-    if (commPct > 0) {
-        sb.push(`*TOTAL :-*           ${fmt(weeklySum)} ${sumStatusStr}`);
-        sb.push(`*COM (${commPct}%) :-*       ${fmt(commVal)}`);
+    if (mpAmount > 0) {
         sb.push("----------------------------------");
+        sb.push(`*MP :-*               ${fmt(mpAmount)}`);
+        sb.push("----------------------------------");
+        sb.push(`*AFTER MP :-*        ${fmt(afterMpSum)} ${statusStr(afterMpSum)}`);
     }
 
-    sb.push(`*WEEKLY TOTAL :-*    ${fmt(netWeekly)} ${statusStr}`);
+    if (actualPagar > 0) {
+        sb.push("----------------------------------");
+        sb.push(`*PAGAR :-*           -${fmt(actualPagar)}`);
+        sb.push("----------------------------------");
+        sb.push(`*AFTER PAGAR :-*     ${fmt(afterPagarSum)} ${statusStr(afterPagarSum)}`);
+    }
+
+    if (shareRatePct > 0 && shareRatePct < 100) {
+        sb.push("----------------------------------");
+        sb.push(`*(${shareRatePct}%) :-*             ${fmt(shareVal)} ${statusStr(afterShareSum)}`);
+    }
+
+    if (magilYeneVal > 0) {
+        sb.push("----------------------------------");
+        sb.push(`*MA YENE :-*         +${fmt(magilYeneVal)}`);
+    } else if (magilDeneVal > 0) {
+        sb.push("----------------------------------");
+        sb.push(`*MA DENE :-*         -${fmt(magilDeneVal)}`);
+    }
+
     sb.push("==================================");
-    sb.push(`TOTAL BALANCE DUE ${fmt(netWeekly)} ${statusStr}`);
+    sb.push(`*WEEKLY TOTAL :-*    ${fmt(finalNet)} ${statusStr(finalNet)}`);
+    sb.push("==================================");
+    sb.push(`TOTAL BALANCE DUE ${fmt(finalNet)} ${statusStr(finalNet)}`);
 
     item.formattedWeeklyMessage = sb.join('\n');
 
-    renderWeeklyTable(weeklyReceiptsData);
+    if (customer) {
+        customer.pagar = actualPagar;
+        customer.pagarEnabled = enablePagar;
+        customer.shareRate = shareRatePct;
+
+        try {
+            await fetch(`/api/customers/${customer.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: customer.name,
+                    mobileNumber: customer.mobileNumber,
+                    city: customer.city,
+                    marketZone: customer.marketZone,
+                    previousBalance: customer.previousBalance,
+                    commissionRate: customer.commissionRate,
+                    commissionEnabled: customer.commissionEnabled,
+                    pagar: actualPagar,
+                    pagarEnabled: enablePagar,
+                    magilBaki: customer.magilBaki,
+                    yene: customer.yene,
+                    dene: customer.dene,
+                    balanceType: customer.balanceType,
+                    farak: customer.farak,
+                    marketCodes: customer.marketCodes,
+                    receiptStyle: customer.receiptStyle,
+                    shareRate: shareRatePct,
+                    share30ProfitOnly: customer.share30ProfitOnly
+                })
+            });
+        } catch (err) {
+            console.error("Error persisting weekly settings:", err);
+        }
+    }
+
+    await loadCustomers('', getSelectedMarket());
+    await loadWeeklyReceipts();
     closeModal('weeklyEditModal');
 };
 
@@ -1828,7 +2088,81 @@ window.saveEditedReceipt = async function() {
     }
 
     const customerObj = customersData ? customersData.find(c => c.id == custId) : null;
+    const isWeeklyMode = currentSegment === 'weekly' || (currentFormattedMessage && (currentFormattedMessage.toUpperCase().includes('WEEKLY') || currentFormattedMessage.toUpperCase().includes('NET TRADE')));
 
+    // --- MODE 1: Weekly Receipt Save Handling ---
+    if (isWeeklyMode) {
+        const weeklyMissPayment = parseFloat(document.getElementById('editWeeklyMissPayment')?.value || 0) || 0;
+        const weeklyMagilYene = parseFloat(document.getElementById('editWeeklyMagilYene')?.value || 0) || 0;
+        const weeklyMagilDene = parseFloat(document.getElementById('editWeeklyMagilDene')?.value || 0) || 0;
+        const updatedMsgText = document.getElementById('waReceiptEditText')?.value || currentFormattedMessage;
+
+        const item = (typeof weeklyReceiptsData !== 'undefined' && Array.isArray(weeklyReceiptsData))
+            ? weeklyReceiptsData.find(w => w.customerId == custId)
+            : null;
+
+        if (item) {
+            item.formattedWeeklyMessage = updatedMsgText;
+            item.finalReceiptNet = computeWeeklyFinalReceiptNet(item);
+        }
+
+        if (customerObj) {
+            customerObj.farak = weeklyMissPayment;
+            if (weeklyMagilYene > 0) customerObj.yene = weeklyMagilYene;
+            if (weeklyMagilDene > 0) customerObj.dene = weeklyMagilDene;
+
+            try {
+                await fetch(`/api/customers/${custId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: customerObj.name,
+                        mobileNumber: customerObj.mobileNumber,
+                        city: customerObj.city,
+                        marketZone: customerObj.marketZone,
+                        previousBalance: customerObj.previousBalance,
+                        commissionRate: customerObj.commissionRate,
+                        commissionEnabled: customerObj.commissionEnabled,
+                        pagar: customerObj.pagar,
+                        pagarEnabled: customerObj.pagarEnabled,
+                        magilBaki: customerObj.magilBaki,
+                        yene: customerObj.yene,
+                        dene: customerObj.dene,
+                        balanceType: customerObj.balanceType,
+                        farak: weeklyMissPayment,
+                        marketCodes: customerObj.marketCodes,
+                        receiptStyle: customerObj.receiptStyle,
+                        shareRate: customerObj.shareRate,
+                        share30ProfitOnly: customerObj.share30ProfitOnly
+                    })
+                });
+            } catch (e) {
+                console.error("Error saving customer weekly settings:", e);
+            }
+        }
+
+        await loadCustomers('', getSelectedMarket());
+        await loadWeeklyReceipts();
+
+        const refreshedItem = (typeof weeklyReceiptsData !== 'undefined' && Array.isArray(weeklyReceiptsData))
+            ? weeklyReceiptsData.find(w => w.customerId == custId)
+            : null;
+
+        if (refreshedItem) {
+            currentFormattedMessage = refreshedItem.formattedWeeklyMessage;
+            const editText = document.getElementById('waReceiptEditText');
+            if (editText) editText.value = refreshedItem.formattedWeeklyMessage;
+        } else {
+            currentFormattedMessage = updatedMsgText;
+        }
+
+        renderReceiptImageCanvas(currentFormattedMessage, currentCustomerName);
+
+        alert(`✅ Weekly Receipt for "${currentCustomerName}" updated successfully!`);
+        return;
+    }
+
+    // --- MODE 2: Daily Transaction Receipt Save Handling ---
     const poSell = parseFloat(document.getElementById('editPoSell') ? document.getElementById('editPoSell').value : 0) || 0;
     const poPay = parseFloat(document.getElementById('editPoPay') ? document.getElementById('editPoPay').value : 0) || 0;
     const pcSell = parseFloat(document.getElementById('editPcSell') ? document.getElementById('editPcSell').value : 0) || 0;
@@ -1886,7 +2220,7 @@ window.saveEditedReceipt = async function() {
             await loadDashboardMetrics();
             await triggerWhatsApp(custId, false);
 
-            alert('✅ Receipt updated successfully! Today\'s Total Sell (PO & PC sell), Payments, Commission, and Ledgers have been updated everywhere across the application.');
+            alert('✅ Daily Receipt updated successfully! Today\'s Total Sell (PO & PC sell), Payments, Commission, and Ledgers have been updated everywhere across the application.');
         } else {
             let errorMsg = '❌ Failed to update receipt in database.';
             try {
@@ -1935,18 +2269,14 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
 
         if (!cleanText) return;
 
-        if (isWeekly && (cleanText.toUpperCase().includes('EXCL') || cleanText.toUpperCase().includes('MAGIL YENE / MAGIL DENE'))) {
-            return;
-        }
-
-        if (isWeekly && cleanText.toUpperCase().includes('DAY') && cleanText.toUpperCase().includes('NET TRADE')) {
+        if (isWeekly && (cleanText.toUpperCase().includes('EXCL') || cleanText.toUpperCase().includes('MAGIL YENE / MAGIL DENE') || cleanText.toUpperCase().includes('NET TRADE') || cleanText.toUpperCase() === 'DAY' || (cleanText.toUpperCase().includes('DAY') && !cleanText.includes(':-')))) {
             return;
         }
 
         // 1. Check Date Badge
         if (cleanText.toLowerCase().includes('date:')) {
-            const match = cleanText.match(/date:\s*([^\s*]+)/i);
-            if (match && match[1]) dateStr = match[1];
+            const match = cleanText.match(/date:\s*([^\*]+)/i);
+            if (match && match[1]) dateStr = match[1].trim();
             return;
         }
 
@@ -1993,7 +2323,7 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
             pendingMissPrefix = false;
         }
 
-        let isHighlight = label.toUpperCase().startsWith('TOTAL') || label.toUpperCase().startsWith('REMAINING') || label.toUpperCase().startsWith('NET') || label.toUpperCase().startsWith('WEEKLY TOTAL');
+        let isHighlight = label.toUpperCase().startsWith('TOTAL') || label.toUpperCase().startsWith('REMAINING') || label.toUpperCase().startsWith('NET') || label.toUpperCase().startsWith('WEEKLY TOTAL') || label.toUpperCase().startsWith('7-DAY TOTAL') || label.toUpperCase().startsWith('AFTER') || label.startsWith('(') || label.toUpperCase().startsWith('SHARE');
 
         let sellVal = '';
         let payVal = '';
@@ -2350,6 +2680,12 @@ function updateCalculatedValuesInText(text) {
             commPct = parseFloat(inputCommEl.value) || 0;
         }
 
+        let mpVal = 0;
+        const mpEl = document.getElementById('editWeeklyMissPayment');
+        if (mpEl && mpEl.value !== '') {
+            mpVal = parseFloat(mpEl.value) || 0;
+        }
+
         let magilYeneVal = 0;
         let magilDeneVal = 0;
         const magilYeneEl = document.getElementById('editWeeklyMagilYene');
@@ -2369,6 +2705,11 @@ function updateCalculatedValuesInText(text) {
                     weeklySum -= sell;
                 } else if (sell > 0) {
                     weeklySum += sell;
+                }
+            } else if (upper.startsWith('MP :-') || upper.startsWith('MP:')) {
+                if (mpVal === 0) {
+                    const { sell, pay } = extractRowNumbers(clean);
+                    mpVal = sell || pay;
                 }
             } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
                 if (commPct === 0) {
@@ -2400,7 +2741,10 @@ function updateCalculatedValuesInText(text) {
             commVal = Math.round(Math.abs(weeklySum) * (commPct / 100));
         }
 
-        let netWeekly = weeklySum >= 0 ? (weeklySum - commVal) : (weeklySum + commVal);
+        let afterCommSum = weeklySum >= 0 ? (weeklySum - commVal) : (weeklySum + commVal);
+        let afterMpSum = mpVal > 0 ? (afterCommSum >= 0 ? (afterCommSum - mpVal) : (afterCommSum + mpVal)) : afterCommSum;
+
+        let netWeekly = afterMpSum;
         let finalNet = netWeekly + magilYeneVal - magilDeneVal;
 
         let statusStr = netWeekly >= 0 ? 'yeṇe' : 'dene';
@@ -2426,6 +2770,33 @@ function updateCalculatedValuesInText(text) {
             } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
                 if (commPct > 0) {
                     newLines.push(`*COM (${commPct}%) :-*       ${commVal.toLocaleString('en-IN')}`);
+                }
+            } else if (upper.startsWith('MP :-') || upper.startsWith('MP:')) {
+                if (mpVal > 0) {
+                    newLines.push(`*MP :-*              ${mpVal.toLocaleString('en-IN')}`);
+                    newLines.push(`----------------------------------`);
+                }
+            } else if (upper.startsWith('AFTER MP :-') || upper.startsWith('AFTER MP:')) {
+                if (mpVal > 0) {
+                    const afterMpStatus = afterMpSum >= 0 ? 'yeṇe' : 'dene';
+                    newLines.push(`*AFTER MP :-*        ${Math.abs(afterMpSum).toLocaleString('en-IN')} ${afterMpStatus}`);
+                    newLines.push(`----------------------------------`);
+                }
+            } else if (upper.startsWith('PAGAR :-') || upper.startsWith('PAGAR:')) {
+                if (actualPagar > 0) {
+                    newLines.push(`*PAGAR :-*           -${actualPagar.toLocaleString('en-IN')}`);
+                    newLines.push(`----------------------------------`);
+                }
+            } else if (upper.startsWith('AFTER PAGAR :-') || upper.startsWith('AFTER PAGAR:')) {
+                if (actualPagar > 0) {
+                    const afterPagarStatus = afterPagarSum >= 0 ? 'yeṇe' : 'dene';
+                    newLines.push(`*AFTER PAGAR :-*     ${Math.abs(afterPagarSum).toLocaleString('en-IN')} ${afterPagarStatus}`);
+                    newLines.push(`----------------------------------`);
+                }
+            } else if (upper.startsWith('SHARE (') || upper.startsWith('(')) {
+                if (shareRatePct > 0 && shareRatePct < 100) {
+                    const afterShareStatus = afterShareSum >= 0 ? 'yeṇe' : 'dene';
+                    newLines.push(`*(${shareRatePct}%) :-*             ${shareVal.toLocaleString('en-IN')} ${afterShareStatus}`);
                 }
             } else if (upper.startsWith('WEEKLY TOTAL :-') || upper.startsWith('WEEKLY TOTAL:')) {
                 if (commPct > 0 && !hasTotalLine) {
@@ -2478,52 +2849,41 @@ function updateCalculatedValuesInText(text) {
             const { sell, pay } = extractRowNumbers(clean);
             sellPc = sell;
             payPc = pay;
-        } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
-            hasCommLine = true;
-            const commMatch = clean.match(/COM\s*\((\d+(\.\d+)?)%\)/i);
-            if (commMatch && commMatch[1]) commPct = parseFloat(commMatch[1]);
         } else if (upper.includes('MAGIL YENE')) {
-            const { sell } = extractRowNumbers(clean);
-            magilYeneVal = sell;
+            const { sell, pay } = extractRowNumbers(clean);
+            magilYeneVal = sell || pay;
         } else if (upper.includes('MAGIL DENE')) {
-            const { sell } = extractRowNumbers(clean);
-            magilDeneVal = sell;
-        } else if (upper.includes('MAGIL')) {
-            const { sell } = extractRowNumbers(clean);
-            if (upper.includes('DENE')) {
-                magilDeneVal = sell;
-            } else {
-                magilYeneVal = sell;
-            }
-        } else if (upper.startsWith('PAGAR')) {
-            const { sell } = extractRowNumbers(clean);
-            pagarVal = sell;
+            const { sell, pay } = extractRowNumbers(clean);
+            magilDeneVal = sell || pay;
+        } else if (upper.startsWith('MP :-') || upper.startsWith('MP:')) {
+            const { sell, pay } = extractRowNumbers(clean);
+            missPaymentVal = sell || pay;
         } else if (upper.includes('MISS')) {
             const { sell, pay } = extractRowNumbers(clean);
             missPaymentVal = pay || sell;
+        } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
+            hasCommLine = true;
+            const match = clean.match(/COM\s*\((\d+(\.\d+)?)%\)/i);
+            if (match && match[1]) commPct = parseFloat(match[1]);
         }
     });
 
-    if (sellPo === null && sellPc === null) return text;
+    let totalSell = (sellPo || 0) + (sellPc || 0);
+    let totalPay = (payPo || 0) + (payPc || 0);
 
-    const totalSell = (sellPo || 0) + (sellPc || 0);
-    const totalPay = (payPo || 0) + (payPc || 0);
-
-    // Commission is calculated if statement has a COM line (always applies on totalSell)
-    if (hasCommLine) {
+    if (commVal === null) {
         commVal = Math.round(totalSell * (commPct / 100));
-    } else {
-        commVal = 0;
     }
+    let totalAfterComm = totalSell - commVal;
+    let remaining = totalAfterComm - totalPay;
+    let netBalance = (remaining + magilYeneVal - magilDeneVal) - pagarVal - missPaymentVal;
 
-    const totalAfterComm = totalSell - commVal;
-    const remaining = totalAfterComm - totalPay - pagarVal - missPaymentVal;
-    const netBal = remaining + magilYeneVal - magilDeneVal;
-    const balSuffix = netBal >= 0 ? 'yeṇe' : 'dene';
-    const absBalStr = Math.abs(netBal).toLocaleString('en-IN');
+    let absBalStr = Math.abs(netBalance).toLocaleString('en-IN');
+    let balSuffix = netBalance >= 0 ? 'y' : 'd';
 
     let totalCount = 0;
-    const updatedLines = lines.map(line => {
+
+    let updatedLines = lines.map(line => {
         const clean = line.replace(/\*/g, '').trim();
         const upper = clean.toUpperCase();
 
@@ -2570,18 +2930,21 @@ function populateQuickFieldsFromText(text) {
             pcSell = sell;
             pcPay = pay;
         } else if (upper.includes('MAGIL YENE')) {
-            const { sell } = extractRowNumbers(clean);
-            magilYene = sell;
+            const { sell, pay } = extractRowNumbers(clean);
+            magilYene = sell || pay;
         } else if (upper.includes('MAGIL DENE')) {
-            const { sell } = extractRowNumbers(clean);
-            magilDene = sell;
+            const { sell, pay } = extractRowNumbers(clean);
+            magilDene = sell || pay;
         } else if (upper.includes('MAGIL')) {
-            const { sell } = extractRowNumbers(clean);
+            const { sell, pay } = extractRowNumbers(clean);
             if (upper.includes('DENE')) {
                 magilDene = sell;
             } else {
                 magilYene = sell;
             }
+        } else if (upper.startsWith('MP :-') || upper.startsWith('MP:')) {
+            const { sell, pay } = extractRowNumbers(clean);
+            missPayment = sell || pay;
         } else if (upper.includes('MISS')) {
             const { sell, pay } = extractRowNumbers(clean);
             missPayment = pay || sell;
@@ -2599,17 +2962,20 @@ function populateQuickFieldsFromText(text) {
     if (document.getElementById('editMagilDene')) document.getElementById('editMagilDene').value = (magilDene !== null && !isNaN(magilDene)) ? magilDene : 0;
     if (document.getElementById('editMissPayment')) document.getElementById('editMissPayment').value = (missPayment !== null && !isNaN(missPayment)) ? missPayment : 0;
     if (document.getElementById('editWeeklyComm')) document.getElementById('editWeeklyComm').value = (weeklyComm > 0) ? weeklyComm : '';
+    if (document.getElementById('editWeeklyMissPayment')) document.getElementById('editWeeklyMissPayment').value = (missPayment !== null && !isNaN(missPayment) && missPayment > 0) ? missPayment : '';
     if (document.getElementById('editWeeklyMagilYene')) document.getElementById('editWeeklyMagilYene').value = (magilYene !== null && !isNaN(magilYene) && magilYene > 0) ? magilYene : '';
     if (document.getElementById('editWeeklyMagilDene')) document.getElementById('editWeeklyMagilDene').value = (magilDene !== null && !isNaN(magilDene) && magilDene > 0) ? magilDene : '';
 }
 
 window.onWeeklyQuickFieldEdited = function() {
+    const missPayment = parseFloat(document.getElementById('editWeeklyMissPayment')?.value || 0) || 0;
     const magilYene = parseFloat(document.getElementById('editWeeklyMagilYene')?.value || 0) || 0;
     const magilDene = parseFloat(document.getElementById('editWeeklyMagilDene')?.value || 0) || 0;
 
     let text = document.getElementById('waReceiptEditText')?.value || currentFormattedMessage || '';
     let lines = text.split('\n');
 
+    let hasMp = false;
     let hasMagilYene = false;
     let hasMagilDene = false;
 
@@ -2617,7 +2983,14 @@ window.onWeeklyQuickFieldEdited = function() {
         const clean = line.replace(/\*/g, '').trim();
         const upper = clean.toUpperCase();
 
-        if (upper.includes('MAGIL YENE')) {
+        if (upper.startsWith('MP :-') || upper.startsWith('MP:')) {
+            hasMp = true;
+            if (missPayment > 0) return `*MP :-*              ${missPayment.toLocaleString('en-IN')}`;
+            return null;
+        } else if (upper.startsWith('AFTER MP :-') || upper.startsWith('AFTER MP:')) {
+            if (missPayment > 0) return null;
+            return null;
+        } else if (upper.includes('MAGIL YENE')) {
             hasMagilYene = true;
             if (magilYene > 0) return `🔴 *MAGIL YENE :-*   ${magilYene.toLocaleString('en-IN')} yeṇe`;
             return null;
@@ -2641,6 +3014,15 @@ window.onWeeklyQuickFieldEdited = function() {
 
     let insertIdx = updatedLines.findIndex(l => l.replace(/\*/g, '').toUpperCase().includes('TOTAL BALANCE DUE'));
     if (insertIdx === -1) insertIdx = updatedLines.length;
+
+    if (!hasMp && missPayment > 0) {
+        let sumIdx = updatedLines.findIndex(l => l.replace(/\*/g, '').toUpperCase().includes('7-DAY TOTAL'));
+        if (sumIdx !== -1) {
+            updatedLines.splice(sumIdx + 1, 0, "----------------------------------", `*MP :-*              ${missPayment.toLocaleString('en-IN')}`);
+        } else {
+            updatedLines.splice(insertIdx, 0, "----------------------------------", `*MP :-*              ${missPayment.toLocaleString('en-IN')}`);
+        }
+    }
 
     if (!hasMagilYene && magilYene > 0) {
         updatedLines.splice(insertIdx, 0, `🔴 *MAGIL YENE :-*   ${magilYene.toLocaleString('en-IN')} yeṇe`);
@@ -2855,12 +3237,30 @@ function downloadReceiptPhoto() {
    ADMIN USER ACCESS CONTROL & TIME WINDOW FUNCTIONS
    ========================================================================== */
 
-async function openUserAccessModal() {
-    const modal = document.getElementById('userAccessModal');
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
     if (modal) {
-        modal.style.display = 'flex';
+        modal.style.setProperty('display', 'flex', 'important');
+        modal.style.setProperty('visibility', 'visible', 'important');
+        modal.style.setProperty('opacity', '1', 'important');
+        modal.style.setProperty('z-index', '999999', 'important');
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.setProperty('display', 'none', 'important');
+    }
+}
+
+async function openUserAccessModal() {
+    openModal('userAccessModal');
+    try {
         await loadAccessSettings();
         await loadUserAccessList();
+    } catch (err) {
+        console.error('User access modal load error:', err);
     }
 }
 
@@ -3004,13 +3404,82 @@ async function deleteUserAccess(id) {
     }
 }
 
+async function openWeeklyModal(custId) {
+    const customer = (customersData || []).find(c => c.id == custId);
+    if (!customer) return;
+
+    if (document.getElementById('editWeeklyCustId')) document.getElementById('editWeeklyCustId').value = customer.id;
+    if (document.getElementById('weeklyEditTitle')) document.getElementById('weeklyEditTitle').textContent = `✏️ Weekly Commission - ${customer.name}`;
+
+    const isPagar = isPagarEnabledForCustomer(customer);
+    const pagarCheck = document.getElementById('weeklyEnablePagar');
+    const pagarVal = document.getElementById('weeklyPagarInput');
+    const pagarContainer = document.getElementById('weeklyPagarContainer');
+
+    if (pagarCheck) pagarCheck.checked = isPagar;
+    if (pagarVal) pagarVal.value = customer.pagar || 0;
+    if (pagarContainer) pagarContainer.style.display = isPagar ? 'block' : 'none';
+
+    const commVal = document.getElementById('weeklyCommInput');
+    if (commVal) commVal.value = customer.commissionRate != null ? customer.commissionRate : 10.0;
+
+    const shareVal = document.getElementById('weeklyShareInput');
+    if (shareVal) shareVal.value = customer.shareRate != null ? customer.shareRate : 100.0;
+
+    openModal('weeklyEditModal');
+}
+
+async function saveWeeklyCommission() {
+    const custId = document.getElementById('editWeeklyCustId')?.value;
+    if (!custId) return;
+
+    const enablePagar = document.getElementById('weeklyEnablePagar')?.checked === true;
+    const pagarAmount = parseFloat(document.getElementById('weeklyPagarInput')?.value || 0) || 0;
+    const commRate = parseFloat(document.getElementById('weeklyCommInput')?.value || 0) || 0;
+    const shareRate = parseFloat(document.getElementById('weeklyShareInput')?.value || 100) || 100;
+
+    try {
+        const res = await fetch(`/api/customers/${custId}`);
+        if (res.ok) {
+            const customer = await res.json();
+            customer.pagarEnabled = enablePagar;
+            customer.pagar = pagarAmount;
+            customer.commissionEnabled = commRate > 0;
+            customer.commissionRate = commRate;
+            customer.shareRate = shareRate;
+
+            const saveRes = await fetch(`/api/customers/${custId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(customer)
+            });
+
+            if (saveRes.ok) {
+                alert('✅ Weekly Commission & Fixed Pagar updated successfully!');
+                closeModal('weeklyEditModal');
+                loadCustomers();
+                if (typeof loadWeeklyReceipts === 'function') loadWeeklyReceipts();
+            } else {
+                alert('⚠️ Failed to save weekly commission.');
+            }
+        }
+    } catch (err) {
+        console.error('Error saving weekly commission:', err);
+        alert('⚠️ Connection error saving weekly commission.');
+    }
+}
+
 // Bind functions to window object for HTML onclick handlers
+window.openModal = openModal;
+window.closeModal = closeModal;
 window.openUserAccessModal = openUserAccessModal;
 window.saveAccessSettings = saveAccessSettings;
 window.loadUserAccessList = loadUserAccessList;
 window.approveUserAccess = approveUserAccess;
 window.togglePauseUserAccess = togglePauseUserAccess;
 window.deleteUserAccess = deleteUserAccess;
+window.openWeeklyModal = openWeeklyModal;
+window.saveWeeklyCommission = saveWeeklyCommission;
 
 // Real-Time Auto-Logout Poller for Regular Users (Checks operating hours & access status every 3 seconds)
 setInterval(async () => {

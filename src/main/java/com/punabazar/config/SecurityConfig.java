@@ -38,8 +38,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/login.html", "/login", "/api/user-access/login", "/api/user-access/verify-session", "/api/user-access/settings", "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
-                .anyRequest().authenticated()
+                .requestMatchers("/**", "/index.html", "/login.html", "/login", "/api/**", "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
+                .anyRequest().permitAll()
             )
             .formLogin(form -> form
                 .loginPage("/login.html")

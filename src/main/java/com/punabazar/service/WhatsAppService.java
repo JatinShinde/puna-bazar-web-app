@@ -229,8 +229,6 @@ public class WhatsAppService {
             pagarVal = pagarParam;
         } else if (latestTx != null && latestTx.getPagarAmount() != null) {
             pagarVal = latestTx.getPagarAmount();
-        } else if (customer.getPagar() != null) {
-            pagarVal = customer.getPagar();
         }
 
         BigDecimal totalSellVal = sellPoVal.add(sellPcVal);
@@ -322,8 +320,6 @@ public class WhatsAppService {
             receiptStyle = "TYPE_5";
         }
 
-        BigDecimal shareRate = customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00");
-
         String dateStr = "";
         if (latestTx != null && latestTx.getTransactionDate() != null) {
             java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy");
@@ -382,33 +378,7 @@ public class WhatsAppService {
                 sb.append("*SUBTOTAL:-         ").append(fmtNum(runningNet1)).append("*\n");
             }
 
-            BigDecimal afterFarak = runningNet1;
-
-            boolean is30ProfitOnly = customer != null && Boolean.TRUE.equals(customer.getShare30ProfitOnly());
-            boolean isShareEnabled = is30ProfitOnly || (shareRate != null && shareRate.compareTo(new BigDecimal("100")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
-            BigDecimal effectiveShareRate = is30ProfitOnly ? new BigDecimal("30.00") : (shareRate != null ? shareRate : new BigDecimal("100.00"));
-            BigDecimal shareAmount = BigDecimal.ZERO;
-            BigDecimal todayNet = afterFarak;
-
-            if (isShareEnabled) {
-                if (is30ProfitOnly) {
-                    if (afterFarak.compareTo(BigDecimal.ZERO) > 0) {
-                        shareAmount = afterFarak.multiply(effectiveShareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
-                    } else {
-                        shareAmount = BigDecimal.ZERO;
-                    }
-                } else {
-                    shareAmount = afterFarak.multiply(effectiveShareRate).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
-                }
-
-                todayNet = afterFarak.subtract(shareAmount);
-                if (shareAmount.compareTo(BigDecimal.ZERO) != 0) {
-                    sb.append("---------------------------------\n");
-                    sb.append("*(").append(effectiveShareRate.stripTrailingZeros().toPlainString()).append("%):-           ").append(fmtNum(shareAmount)).append("*\n");
-                    sb.append("---------------------------------\n");
-                }
-            }
-
+            BigDecimal todayNet = runningNet1;
             netBalanceVal = todayNet.add(netOpening);
             appendBalanceSection(sb, todayNet, yeneVal, deneVal, netBalanceVal);
         } else if ("TYPE_2".equals(receiptStyle) || "SIMPLE".equals(receiptStyle)) {
@@ -475,6 +445,7 @@ public class WhatsAppService {
                 sb.append("                          *").append(fmtNum(afterPayVal)).append("*\n");
             }
             boolean is30ProfitOnly = customer != null && Boolean.TRUE.equals(customer.getShare30ProfitOnly());
+            BigDecimal shareRate = customer != null && customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00");
             boolean isShareEnabled = is30ProfitOnly || (shareRate != null && shareRate.compareTo(new BigDecimal("100")) < 0 && shareRate.compareTo(BigDecimal.ZERO) > 0);
             BigDecimal effectiveShareRate = is30ProfitOnly ? new BigDecimal("30.00") : (shareRate != null ? shareRate : new BigDecimal("100.00"));
             BigDecimal shareAmount = BigDecimal.ZERO;

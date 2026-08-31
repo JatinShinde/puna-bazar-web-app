@@ -52,8 +52,8 @@ public class DataInitializer implements CommandLineRunner {
             userRepository.save(admin);
         }
 
-        // 2. Seed Live Customers & Transactions from JSON backup if database is empty
-        if (customerRepository.count() == 0) {
+        // 2. Seed Live Customers & Transactions from JSON backup if database has few customers
+        if (customerRepository.count() < 10) {
             try {
                 org.springframework.core.io.ClassPathResource resource = new org.springframework.core.io.ClassPathResource("seed_customers.json");
                 if (resource.exists()) {
