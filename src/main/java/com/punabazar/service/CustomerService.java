@@ -214,6 +214,42 @@ public class CustomerService {
         if (request.getShare30ProfitOnly() != null) {
             customer.setShare30ProfitOnly(request.getShare30ProfitOnly());
         }
+        if (request.getShare30ProfitOnlyRate() != null) {
+            customer.setShare30ProfitOnlyRate(request.getShare30ProfitOnlyRate());
+        }
+        if (request.getWeeklyCommissionEnabled() != null) {
+            customer.setWeeklyCommissionEnabled(request.getWeeklyCommissionEnabled());
+        }
+        if (request.getWeeklyCommissionRate() != null) {
+            customer.setWeeklyCommissionRate(request.getWeeklyCommissionRate());
+        }
+        if (request.getWeeklyPagarEnabled() != null) {
+            customer.setWeeklyPagarEnabled(request.getWeeklyPagarEnabled());
+        }
+        if (request.getWeeklyPagar() != null) {
+            customer.setWeeklyPagar(request.getWeeklyPagar());
+        }
+        if (request.getWeeklyShareEnabled() != null) {
+            customer.setWeeklyShareEnabled(request.getWeeklyShareEnabled());
+        }
+        if (request.getWeeklyShareRate() != null) {
+            customer.setWeeklyShareRate(request.getWeeklyShareRate());
+        }
+        if (request.getWeeklyShare30ProfitOnly() != null) {
+            customer.setWeeklyShare30ProfitOnly(request.getWeeklyShare30ProfitOnly());
+        }
+        if (request.getWeeklyShare30ProfitOnlyRate() != null) {
+            customer.setWeeklyShare30ProfitOnlyRate(request.getWeeklyShare30ProfitOnlyRate());
+        }
+        if (request.getYene() != null) {
+            customer.setYene(request.getYene());
+        }
+        if (request.getDene() != null) {
+            customer.setDene(request.getDene());
+        }
+        if (request.getFarak() != null) {
+            customer.setFarak(request.getFarak());
+        }
 
         customer = customerRepository.save(customer);
 
@@ -264,6 +300,52 @@ public class CustomerService {
         }
         if (request.getShare30ProfitOnly() != null) {
             customer.setShare30ProfitOnly(request.getShare30ProfitOnly());
+        }
+        if (request.getShare30ProfitOnlyRate() != null) {
+            customer.setShare30ProfitOnlyRate(request.getShare30ProfitOnlyRate());
+        }
+        if (request.getWeeklyCommissionEnabled() != null) {
+            customer.setWeeklyCommissionEnabled(request.getWeeklyCommissionEnabled());
+        }
+        if (request.getWeeklyCommissionRate() != null) {
+            customer.setWeeklyCommissionRate(request.getWeeklyCommissionRate());
+        }
+        if (request.getWeeklyPagarEnabled() != null) {
+            customer.setWeeklyPagarEnabled(request.getWeeklyPagarEnabled());
+        }
+        if (request.getWeeklyPagar() != null) {
+            customer.setWeeklyPagar(request.getWeeklyPagar());
+        }
+        if (request.getWeeklyShareEnabled() != null) {
+            customer.setWeeklyShareEnabled(request.getWeeklyShareEnabled());
+        }
+        if (request.getWeeklyShareRate() != null) {
+            customer.setWeeklyShareRate(request.getWeeklyShareRate());
+        }
+        if (request.getWeeklyShare30ProfitOnly() != null) {
+            customer.setWeeklyShare30ProfitOnly(request.getWeeklyShare30ProfitOnly());
+        }
+        if (request.getWeeklyShare30ProfitOnlyRate() != null) {
+            customer.setWeeklyShare30ProfitOnlyRate(request.getWeeklyShare30ProfitOnlyRate());
+        }
+        if (request.getYene() != null) {
+            customer.setYene(request.getYene());
+            if (request.getYene().compareTo(java.math.BigDecimal.ZERO) == 0 && (request.getDene() == null || request.getDene().compareTo(java.math.BigDecimal.ZERO) == 0)) {
+                customer.setMagilBaki(java.math.BigDecimal.ZERO);
+            } else if (request.getYene().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                customer.setMagilBaki(request.getYene());
+                customer.setBalanceType("YENE");
+            }
+        }
+        if (request.getDene() != null) {
+            customer.setDene(request.getDene());
+            if (request.getDene().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                customer.setMagilBaki(request.getDene());
+                customer.setBalanceType("DENE");
+            }
+        }
+        if (request.getFarak() != null) {
+            customer.setFarak(request.getFarak());
         }
         if (request.getMarketCodes() != null && !request.getMarketCodes().trim().isEmpty()) {
             customer.setMarketCodes(request.getMarketCodes().trim());

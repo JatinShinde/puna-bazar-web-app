@@ -24,6 +24,15 @@ public class CustomerRequestDTO {
     private Boolean pagarEnabled;
     private Boolean commissionEnabled;
     private Boolean share30ProfitOnly;
+    private BigDecimal share30ProfitOnlyRate;
+    private Boolean weeklyCommissionEnabled;
+    private BigDecimal weeklyCommissionRate;
+    private Boolean weeklyPagarEnabled;
+    private BigDecimal weeklyPagar;
+    private Boolean weeklyShareEnabled;
+    private BigDecimal weeklyShareRate;
+    private Boolean weeklyShare30ProfitOnly;
+    private BigDecimal weeklyShare30ProfitOnlyRate;
 
     public CustomerRequestDTO() {}
 
@@ -90,4 +99,31 @@ public class CustomerRequestDTO {
 
     public Boolean getShare30ProfitOnly() { return share30ProfitOnly; }
     public void setShare30ProfitOnly(Boolean share30ProfitOnly) { this.share30ProfitOnly = share30ProfitOnly; }
+
+    public BigDecimal getShare30ProfitOnlyRate() { return share30ProfitOnlyRate; }
+    public void setShare30ProfitOnlyRate(BigDecimal share30ProfitOnlyRate) { this.share30ProfitOnlyRate = share30ProfitOnlyRate; }
+
+    public Boolean getWeeklyCommissionEnabled() { return weeklyCommissionEnabled; }
+    public void setWeeklyCommissionEnabled(Boolean weeklyCommissionEnabled) { this.weeklyCommissionEnabled = weeklyCommissionEnabled; }
+
+    public BigDecimal getWeeklyCommissionRate() { return weeklyCommissionRate; }
+    public void setWeeklyCommissionRate(BigDecimal weeklyCommissionRate) { this.weeklyCommissionRate = weeklyCommissionRate; }
+
+    public Boolean getWeeklyPagarEnabled() { return weeklyPagarEnabled; }
+    public void setWeeklyPagarEnabled(Boolean weeklyPagarEnabled) { this.weeklyPagarEnabled = weeklyPagarEnabled; }
+
+    public BigDecimal getWeeklyPagar() { return weeklyPagar; }
+    public void setWeeklyPagar(BigDecimal weeklyPagar) { this.weeklyPagar = weeklyPagar; }
+
+    public Boolean getWeeklyShareEnabled() { return weeklyShareEnabled; }
+    public void setWeeklyShareEnabled(Boolean weeklyShareEnabled) { this.weeklyShareEnabled = weeklyShareEnabled; }
+
+    public BigDecimal getWeeklyShareRate() { return weeklyShareRate; }
+    public void setWeeklyShareRate(BigDecimal weeklyShareRate) { this.weeklyShareRate = weeklyShareRate; }
+
+    public Boolean getWeeklyShare30ProfitOnly() { return weeklyShare30ProfitOnly; }
+    public void setWeeklyShare30ProfitOnly(Boolean weeklyShare30ProfitOnly) { this.weeklyShare30ProfitOnly = weeklyShare30ProfitOnly; }
+
+    public BigDecimal getWeeklyShare30ProfitOnlyRate() { return weeklyShare30ProfitOnlyRate; }
+    public void setWeeklyShare30ProfitOnlyRate(BigDecimal weeklyShare30ProfitOnlyRate) { this.weeklyShare30ProfitOnlyRate = weeklyShare30ProfitOnlyRate; }
 }

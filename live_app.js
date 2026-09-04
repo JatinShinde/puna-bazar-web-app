@@ -55,34 +55,10 @@ document.addEventListener('DOMContentLoaded', () => {
         txPicker.addEventListener('input', onTxDateChange);
     }
 
-    const currentDate = (globalPicker && globalPicker.value) ? globalPicker.value : todayStr;
     checkAuth();
-    loadDashboardMetrics(currentDate);
-    loadCustomers('', getSelectedMarket(), currentDate);
-    populateAndRenderReceiptsDropdown(currentDate);
-
-    // Auto Date Change Watcher (Resets daily metrics to ₹0.00 automatically when a new day starts)
-    let lastKnownDateStr = todayStr;
-    setInterval(() => {
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const newTodayStr = `${yyyy}-${mm}-${dd}`;
-
-        if (newTodayStr !== lastKnownDateStr) {
-            lastKnownDateStr = newTodayStr;
-            const gPicker = document.getElementById('globalDatePicker');
-            const tPicker = document.getElementById('txDate');
-            if (gPicker) gPicker.value = newTodayStr;
-            if (tPicker) tPicker.value = newTodayStr;
-            loadDashboardMetrics(newTodayStr);
-            loadCustomers(document.getElementById('searchInput')?.value || '', getSelectedMarket(), newTodayStr);
-            if (typeof populateAndRenderReceiptsDropdown === 'function') {
-                populateAndRenderReceiptsDropdown(newTodayStr);
-            }
-        }
-    }, 30000);
+    loadDashboardMetrics();
+    loadCustomers();
+    populateAndRenderReceiptsDropdown();
 
     // Event Listeners for Live Math Calculator Engine
     ['tradeReceiptStyle', 'commPercent', 'shareRatePercent', 'tradeYene', 'tradeDene', 'farakAmount', 'pagarAmount'].forEach(id => {
@@ -739,33 +715,14 @@ function renderWeeklyTable(list) {
     }
 }
 
-window.shareWeeklyWhatsApp = async function(customerId) {
-    try {
-        const res = await fetch('/api/weekly-receipts');
-        if (res.ok) {
-            weeklyReceiptsData = await res.json();
-            if (typeof renderWeeklyTable === 'function') {
-                renderWeeklyTable(weeklyReceiptsData);
-            }
-        }
-    } catch (e) {
-        console.warn('Error fetching fresh weekly receipts:', e);
-    }
-
-    const item = weeklyReceiptsData ? weeklyReceiptsData.find(w => w.customerId == customerId) : null;
+window.shareWeeklyWhatsApp = function(customerId) {
+    const item = weeklyReceiptsData.find(w => w.customerId == customerId);
     if (!item || !item.formattedWeeklyMessage) return;
-
-    currentActiveCustomerId = customerId;
-    window.currentActiveCustomerId = customerId;
-    const modalEl = document.getElementById('whatsappModal');
-    if (modalEl) modalEl.setAttribute('data-customer-id', customerId);
 
     currentFormattedMessage = item.formattedWeeklyMessage;
     originalFormattedMessage = item.formattedWeeklyMessage;
     const editTextEl = document.getElementById('waReceiptEditText');
     if (editTextEl) editTextEl.value = item.formattedWeeklyMessage;
-    populateQuickFieldsFromText(item.formattedWeeklyMessage);
-
     if (document.getElementById('waCustomerName')) {
         document.getElementById('waCustomerName').textContent = `Weekly Statement - ${item.customerName}`;
     }
@@ -884,12 +841,6 @@ window.editCustomer = function(id) {
     }
     if (document.getElementById('custShare30ProfitOnly')) {
         document.getElementById('custShare30ProfitOnly').checked = is30ProfitOnly;
-    }
-    if (document.getElementById('custShare30ProfitOnlyVal')) {
-        document.getElementById('custShare30ProfitOnlyVal').value = customer.share30ProfitOnlyRate != null ? customer.share30ProfitOnlyRate : 30.0;
-    }
-    if (document.getElementById('custShare30ProfitOnlyContainer')) {
-        document.getElementById('custShare30ProfitOnlyContainer').style.display = is30ProfitOnly ? 'block' : 'none';
     }
     if (document.getElementById('custShareRateVal')) {
         document.getElementById('custShareRateVal').value = (isShareEnabled && customer.shareRate != null && customer.shareRate !== 100) ? customer.shareRate : 40.0;
@@ -1171,7 +1122,6 @@ async function handleNewCustomerSubmit(e) {
 
     const isShare4060Checked = document.getElementById('custShare4060') ? document.getElementById('custShare4060').checked : false;
     const isShare30ProfitOnlyChecked = document.getElementById('custShare30ProfitOnly') ? document.getElementById('custShare30ProfitOnly').checked : false;
-    const share30ProfitOnlyRateVal = document.getElementById('custShare30ProfitOnlyVal') ? (parseFloat(document.getElementById('custShare30ProfitOnlyVal').value) || 30.0) : 30.0;
     const customShareRate = document.getElementById('custShareRateVal') ? (parseFloat(document.getElementById('custShareRateVal').value) || 40.0) : 40.0;
     const shareRateVal = isShare4060Checked ? customShareRate : 100.0;
 
@@ -1184,7 +1134,6 @@ async function handleNewCustomerSubmit(e) {
         receiptStyle: 'TYPE_1',
         shareRate: shareRateVal,
         share30ProfitOnly: isShare30ProfitOnlyChecked,
-        share30ProfitOnlyRate: share30ProfitOnlyRateVal,
         commissionPercentage: commVal,
         commissionEnabled: isCommEnabledChecked,
         pagar: pagarVal,
@@ -1249,9 +1198,6 @@ async function triggerWhatsApp(customerId, autoShare = false) {
         }
 
         currentActiveCustomerId = customerId;
-        window.currentActiveCustomerId = customerId;
-        const modalEl = document.getElementById('whatsappModal');
-        if (modalEl) modalEl.setAttribute('data-customer-id', customerId);
 
         const customer = customersData ? customersData.find(c => c.id == customerId) : null;
 
@@ -1875,109 +1821,14 @@ let currentWaLink = '';
 let currentActiveCustomerId = null;
 
 window.saveEditedReceipt = async function() {
-    const modalEl = document.getElementById('whatsappModal');
-    const modalCustId = modalEl ? modalEl.getAttribute('data-customer-id') : null;
-    let custId = currentActiveCustomerId || window.currentActiveCustomerId || modalCustId || (document.getElementById('selectCustomer') ? document.getElementById('selectCustomer').value : '');
-
-    if ((!custId || custId === 'undefined' || custId === 'null') && window.customersData && window.customersData.length > 0) {
-        if (currentCustomerName) {
-            const match = window.customersData.find(c => c.name && c.name.trim().toLowerCase() === currentCustomerName.trim().toLowerCase());
-            if (match) custId = match.id;
-        }
-    }
-
-    if (!custId || custId === 'undefined' || custId === 'null') {
+    const custId = currentActiveCustomerId || (document.getElementById('selectCustomer') ? document.getElementById('selectCustomer').value : '');
+    if (!custId) {
         alert('⚠️ Customer not identified. Please select a customer first.');
         return;
     }
 
-    const modalTitleText = document.getElementById('waCustomerName')?.textContent || '';
-    const textVal = document.getElementById('waReceiptEditText')?.value || '';
-    const isWeeklyMode = (currentSegment === 'weekly') || 
-                         modalTitleText.toLowerCase().includes('weekly') ||
-                         (document.getElementById('weeklyEditFields') && document.getElementById('weeklyEditFields').style.display !== 'none') ||
-                         textVal.toUpperCase().includes('MON :-') || textVal.toUpperCase().includes('TUE :-') || textVal.toUpperCase().includes('WEEKLY');
+    const customerObj = customersData ? customersData.find(c => c.id == custId) : null;
 
-    // --- 1. WEEKLY RECEIPT UPDATE (Updates Customer Weekly Balances Only, Leaves Daily Entry Untouched) ---
-    if (isWeeklyMode) {
-        const lines = textVal.split('\n');
-
-        let parsedYene = 0;
-        let parsedDene = 0;
-        let parsedMiss = 0;
-
-        lines.forEach(l => {
-            const clean = l.replace(/\*/g, '').trim();
-            const upper = clean.toUpperCase();
-            if (upper.includes('MAGIL YENE')) {
-                const { sell, pay } = extractRowNumbers(clean);
-                parsedYene = sell || pay;
-            } else if (upper.includes('MAGIL DENE')) {
-                const { sell, pay } = extractRowNumbers(clean);
-                parsedDene = sell || pay;
-            } else if (upper.includes('MISS') || upper.includes('FARAK')) {
-                const { sell, pay } = extractRowNumbers(clean);
-                parsedMiss = pay || sell;
-            }
-        });
-
-        const qYene = getQuickFieldValue('editWeeklyMagilYene', 'editMagilYene');
-        const qDene = getQuickFieldValue('editWeeklyMagilDene', 'editMagilDene');
-        const qMiss = getQuickFieldValue('editWeeklyMissPayment', 'editMissPayment');
-
-        const isYeneCleared = (document.getElementById('editWeeklyMagilYene')?.value === '') || (document.getElementById('editMagilYene')?.value === '');
-        const isDeneCleared = (document.getElementById('editWeeklyMagilDene')?.value === '') || (document.getElementById('editMagilDene')?.value === '');
-        const isMissCleared = (document.getElementById('editWeeklyMissPayment')?.value === '') || (document.getElementById('editMissPayment')?.value === '');
-
-        const finalYene = isYeneCleared ? qYene : (qYene > 0 ? qYene : parsedYene);
-        const finalDene = isDeneCleared ? qDene : (qDene > 0 ? qDene : parsedDene);
-        const finalMiss = isMissCleared ? qMiss : (qMiss > 0 ? qMiss : parsedMiss);
-
-        const payload = {
-            yene: finalYene,
-            dene: finalDene,
-            farak: finalMiss
-        };
-
-        try {
-            const btn = document.getElementById('btnSaveEditedReceipt');
-            if (btn) {
-                btn.disabled = true;
-                btn.textContent = '⏳ Saving Weekly Statement...';
-            }
-
-            const res = await fetch(`/api/customers/${custId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                await loadCustomers('', getSelectedMarket());
-                if (typeof loadWeeklyReceipts === 'function') {
-                    await loadWeeklyReceipts();
-                }
-                if (typeof shareWeeklyWhatsApp === 'function') {
-                    await shareWeeklyWhatsApp(custId);
-                }
-                alert('✅ Weekly Statement receipt updated successfully!');
-            } else {
-                alert('❌ Failed to update weekly receipt balances.');
-            }
-        } catch (err) {
-            console.error('Error saving weekly receipt:', err);
-            alert('❌ Error updating weekly receipt.');
-        } finally {
-            const btn = document.getElementById('btnSaveEditedReceipt');
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = '💾 Save & Update Receipt (Reflect Everywhere)';
-            }
-        }
-        return;
-    }
-
-    // --- 2. DAILY RECEIPT UPDATE (Updates Today's Trade Entry) ---
     const poSell = parseFloat(document.getElementById('editPoSell') ? document.getElementById('editPoSell').value : 0) || 0;
     const poPay = parseFloat(document.getElementById('editPoPay') ? document.getElementById('editPoPay').value : 0) || 0;
     const pcSell = parseFloat(document.getElementById('editPcSell') ? document.getElementById('editPcSell').value : 0) || 0;
@@ -2035,7 +1886,7 @@ window.saveEditedReceipt = async function() {
             await loadDashboardMetrics();
             await triggerWhatsApp(custId, false);
 
-            alert('✅ Daily Receipt updated successfully! Today\'s Total Sell (PO & PC sell), Payments, Commission, and Ledgers have been updated everywhere across the application.');
+            alert('✅ Receipt updated successfully! Today\'s Total Sell (PO & PC sell), Payments, Commission, and Ledgers have been updated everywhere across the application.');
         } else {
             let errorMsg = '❌ Failed to update receipt in database.';
             try {
@@ -2092,20 +1943,15 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
             return;
         }
 
-        // 1. Check Date
-        if (cleanText.toUpperCase().startsWith('DATE:') || cleanText.toUpperCase().startsWith('DATE :-') || cleanText.toUpperCase().startsWith('DATE')) {
-            const dateVal = cleanText.replace(/^DATE\s*[:-]+\s*/i, '').trim();
-            if (dateVal) dateStr = dateVal;
+        // 1. Check Date Badge
+        if (cleanText.toLowerCase().includes('date:')) {
+            const match = cleanText.match(/date:\s*([^\s*]+)/i);
+            if (match && match[1]) dateStr = match[1];
             return;
         }
 
         // 2. Check Divider Lines
-        if (trimmed.startsWith('===') || trimmed.includes('======') || trimmed.startsWith('---=')) {
-            if (parsedRows.length > 0 && parsedRows[parsedRows.length - 1].type !== 'double_divider') {
-                parsedRows.push({ type: 'double_divider' });
-            }
-            return;
-        } else if (trimmed.startsWith('---') || trimmed.includes('-----') || trimmed.startsWith('___') || trimmed.includes('____')) {
+        if (trimmed.startsWith('---') || trimmed.includes('-----') || trimmed.startsWith('___') || trimmed.includes('____')) {
             if (parsedRows.length > 0 && parsedRows[parsedRows.length - 1].type !== 'divider') {
                 parsedRows.push({ type: 'divider' });
             }
@@ -2135,7 +1981,7 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
         }
 
         // 6. Data Row
-        let isMagil = (line.includes('🔴') || cleanText.toUpperCase().includes('MAGIL')) && !cleanText.toUpperCase().includes('MISS') && !cleanText.toUpperCase().includes('FARAK') && !cleanText.toUpperCase().includes('MP');
+        let isMagil = line.includes('🔴') || cleanText.toUpperCase().includes('MAGIL');
         cleanText = cleanText.replace(/🔴/g, '').trim();
 
         const parts = cleanText.split(/:-|:/);
@@ -2147,14 +1993,7 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
             pendingMissPrefix = false;
         }
 
-        const upperLabel = label.toUpperCase();
-        let isHighlight = upperLabel.startsWith('TOTAL') || 
-                          upperLabel.startsWith('REMAINING') || 
-                          upperLabel.startsWith('NET') || 
-                          upperLabel.startsWith('WEEKLY TOTAL') || 
-                          upperLabel.includes('7-DAY TOTAL') || 
-                          upperLabel.includes('AFTER MP') || 
-                          (label.includes('(') && label.includes('%'));
+        let isHighlight = label.toUpperCase().startsWith('TOTAL') || label.toUpperCase().startsWith('REMAINING') || label.toUpperCase().startsWith('NET') || label.toUpperCase().startsWith('WEEKLY TOTAL');
 
         let sellVal = '';
         let payVal = '';
@@ -2164,25 +2003,25 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
             payVal = parts[2].trim();
         } else if (parts.length === 2) {
             const valStr = parts[1].trim();
-            const numbers = valStr.match(/[\d,.]+(\s*(yeṇe|dene|yene|dene))?/gi) || [];
-            const upperLbl = label.toUpperCase();
-            const isPaymentOrBalance = upperLbl.includes('PAYMENT') || 
-                                       upperLbl.includes('REMAINING') || 
-                                       upperLbl.includes('PAGAR') || 
-                                       upperLbl.includes('MAGIL') || 
-                                       upperLbl.includes('SUBTOTAL') || 
-                                       upperLbl.includes('MISS') || 
-                                       upperLbl.includes('FARAK') || 
-                                       upperLbl.includes('COM');
-
-            if (numbers.length >= 2) {
-                sellVal = numbers[0].trim();
-                payVal = numbers[1].trim();
-            } else if (isWeekly && !upperLbl.includes('धंदा') && !upperLbl.includes('SELL')) {
+            if (isWeekly) {
                 payVal = valStr;
                 sellVal = '';
             } else {
-                if (numbers.length === 1) {
+                const numbers = valStr.match(/[\d,.]+(\s*(yeṇe|dene|yene|dene))?/gi) || [];
+                const upperLbl = label.toUpperCase();
+                const isPaymentOrBalance = upperLbl.includes('PAYMENT') || 
+                                           upperLbl.includes('REMAINING') || 
+                                           upperLbl.includes('PAGAR') || 
+                                           upperLbl.includes('MAGIL') || 
+                                           upperLbl.includes('SUBTOTAL') || 
+                                           upperLbl.includes('MISS') || 
+                                           upperLbl.includes('FARAK') || 
+                                           upperLbl.includes('COM');
+
+                if (numbers.length >= 2) {
+                    sellVal = numbers[0].trim();
+                    payVal = numbers[1].trim();
+                } else if (numbers.length === 1) {
                     if (isPaymentOrBalance) {
                         payVal = numbers[0].trim();
                         sellVal = '';
@@ -2218,7 +2057,7 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
     if (!totalBalanceStr) {
         for (let i = parsedRows.length - 1; i >= 0; i--) {
             const r = parsedRows[i];
-            if (r.type !== 'divider' && r.type !== 'double_divider' && (r.sellVal || r.payVal)) {
+            if (r.type !== 'divider' && (r.sellVal || r.payVal)) {
                 if ((r.sellVal && (r.sellVal.includes('yeṇe') || r.sellVal.includes('dene') || r.sellVal.includes('yene'))) ||
                     (r.payVal && (r.payVal.includes('yeṇe') || r.payVal.includes('dene') || r.payVal.includes('yene')))) {
                     totalBalanceStr = r.sellVal || r.payVal;
@@ -2238,7 +2077,7 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
     
     let contentRowsCount = 0;
     parsedRows.forEach(r => {
-        if (r.type === 'divider' || r.type === 'double_divider') contentRowsCount += 0.5;
+        if (r.type === 'divider') contentRowsCount += 0.5;
         else contentRowsCount += 1;
     });
 
@@ -2280,7 +2119,7 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
     ctx.textBaseline = 'top';
     ctx.fillText(displayHeaderTitle, canvasWidth / 2, 18 * scale);
 
-    // Date Pill Badge (#1e293b pill with border #38bdf8) - Increased Size & Font
+    // Date Pill Badge (#1e293b pill with border #334155) - Increased Size & Font
     const dateText = `DATE: ${dateStr}`;
     ctx.font = `900 ${18 * scale}px ${fontStack}`;
     const dateWidth = ctx.measureText(dateText).width + (32 * scale);
@@ -2349,20 +2188,6 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
             ctx.lineTo(canvasWidth - paddingX, currentY - (11 * scale));
             ctx.stroke();
             ctx.setLineDash([]);
-            currentY += 22 * scale;
-            return;
-        } else if (row.type === 'double_divider') {
-            ctx.beginPath();
-            ctx.strokeStyle = '#64748b';
-            ctx.lineWidth = 2 * scale;
-            ctx.moveTo(paddingX, currentY - (15 * scale));
-            ctx.lineTo(canvasWidth - paddingX, currentY - (15 * scale));
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.moveTo(paddingX, currentY - (9 * scale));
-            ctx.lineTo(canvasWidth - paddingX, currentY - (9 * scale));
-            ctx.stroke();
             currentY += 22 * scale;
             return;
         }
@@ -2435,32 +2260,34 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
         currentY += rowHeight;
     });
 
-    // Bottom Banner: TOTAL BALANCE DUE Box
-    const bannerBoxHeight = 84 * scale;
-    const bannerBoxY = canvasHeight - bannerBoxHeight - (18 * scale);
-    const bannerBoxWidth = canvasWidth - (40 * scale);
-    const bannerBoxX = 20 * scale;
+    // 6. Bottom Navy Banner (TOTAL BALANCE DUE)
+    currentY += 15 * scale;
+    const bannerBoxX = paddingX;
+    const bannerBoxY = currentY;
+    const bannerBoxWidth = canvasWidth - (2 * paddingX);
+    const bannerBoxHeight = 90 * scale;
 
     ctx.fillStyle = '#0f172a';
     drawRoundedRect(ctx, bannerBoxX, bannerBoxY, bannerBoxWidth, bannerBoxHeight, 14 * scale);
     ctx.fill();
 
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 2.5 * scale;
+    drawRoundedRect(ctx, bannerBoxX, bannerBoxY, bannerBoxWidth, bannerBoxHeight, 14 * scale);
+    ctx.stroke();
+
+    // Banner Text
     ctx.fillStyle = '#94a3b8';
     ctx.font = `800 ${14 * scale}px ${fontStack}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText('TOTAL BALANCE DUE', canvasWidth / 2, bannerBoxY + (14 * scale));
+    ctx.fillText('TOTAL BALANCE DUE', canvasWidth / 2, bannerBoxY + (16 * scale));
 
-    const isDeneFinal = totalBalanceStr ? (totalBalanceStr.toLowerCase().includes('dene') || totalBalanceStr.includes('-')) : false;
-    ctx.fillStyle = isDeneFinal ? '#f87171' : '#38bdf8';
-    ctx.font = `900 ${28 * scale}px ${fontStack}`;
+    const finalValText = totalBalanceStr || '₹0.00';
+    const isDene = finalValText.toLowerCase().includes('dene');
+    ctx.fillStyle = isDene ? '#f87171' : '#38bdf8';
+    ctx.font = `900 ${30 * scale}px ${fontStack}`;
     ctx.textBaseline = 'bottom';
-
-    let finalValText = totalBalanceStr || '0.00';
-    if (!finalValText.toLowerCase().includes('yeṇe') && !finalValText.toLowerCase().includes('dene') && !finalValText.toLowerCase().includes('yene')) {
-        finalValText += isDeneFinal ? ' dene' : ' yeṇe';
-    }
-
     ctx.fillText(finalValText, canvasWidth / 2, bannerBoxY + bannerBoxHeight - (12 * scale));
 }
 
@@ -2486,16 +2313,7 @@ function toggleEditReceiptPanel() {
     const editText = document.getElementById('waReceiptEditText');
     if (!editContainer) return;
 
-    const modalTitleText = document.getElementById('waCustomerName')?.textContent || '';
-    const isWeekly = (currentSegment === 'weekly') || 
-                     modalTitleText.toLowerCase().includes('weekly') ||
-                     (currentFormattedMessage && (
-                         currentFormattedMessage.toUpperCase().includes('WEEKLY') || 
-                         currentFormattedMessage.toUpperCase().includes('NET TRADE') ||
-                         currentFormattedMessage.toUpperCase().includes('MON :-') || 
-                         currentFormattedMessage.toUpperCase().includes('TUE :-') || 
-                         currentFormattedMessage.toUpperCase().includes('WED :-')
-                     ));
+    const isWeekly = currentFormattedMessage ? (currentFormattedMessage.toUpperCase().includes('WEEKLY') || currentFormattedMessage.toUpperCase().includes('NET TRADE')) : false;
 
     const isHidden = editContainer.style.display === 'none' || !editContainer.style.display;
     if (isHidden) {
@@ -2532,13 +2350,12 @@ function extractRowNumbers(cleanLine) {
 function updateCalculatedValuesInText(text) {
     if (!text) return text;
 
-    const isWeekly = text.toUpperCase().includes('WEEKLY') || text.toUpperCase().includes('NET TRADE') || text.includes('धंदा') || text.includes('पेमेंट') || text.toUpperCase().includes('MON :-') || text.toUpperCase().includes('TUE :-') || text.toUpperCase().includes('WED :-') || text.toUpperCase().includes('THU :-') || text.toUpperCase().includes('FRI :-') || text.toUpperCase().includes('SAT :-') || text.toUpperCase().includes('SUN :-');
+    const isWeekly = text.toUpperCase().includes('WEEKLY') || text.toUpperCase().includes('NET TRADE');
     const lines = text.split('\n');
 
     if (isWeekly) {
+        let weeklySum = 0;
         let commPct = 0;
-        let sharePct = 0;
-
         let inputCommEl = document.getElementById('editWeeklyComm');
         if (inputCommEl && inputCommEl.value !== '') {
             commPct = parseFloat(inputCommEl.value) || 0;
@@ -2546,157 +2363,11 @@ function updateCalculatedValuesInText(text) {
 
         let magilYeneVal = 0;
         let magilDeneVal = 0;
-        const magilYeneEl = document.getElementById('editWeeklyMagilYene') || document.getElementById('editMagilYene');
-        const magilYeneHasField = magilYeneEl !== null;
+        const magilYeneEl = document.getElementById('editWeeklyMagilYene');
         if (magilYeneEl && magilYeneEl.value !== '') magilYeneVal = parseFloat(magilYeneEl.value) || 0;
-
-        const magilDeneEl = document.getElementById('editWeeklyMagilDene') || document.getElementById('editMagilDene');
-        const magilDeneHasField = magilDeneEl !== null;
+        const magilDeneEl = document.getElementById('editWeeklyMagilDene');
         if (magilDeneEl && magilDeneEl.value !== '') magilDeneVal = parseFloat(magilDeneEl.value) || 0;
 
-        let missPaymentVal = 0;
-        const missEl = document.getElementById('editWeeklyMissPayment') || document.getElementById('editMissPayment');
-        const missHasField = missEl !== null;
-        if (missEl && missEl.value !== '') missPaymentVal = parseFloat(missEl.value) || 0;
-
-        let isDetailed2Col = text.includes('धंदा') || text.includes('पेमेंट') || lines.some(l => {
-            const u = l.replace(/\*/g, '').trim().toUpperCase();
-            return u.startsWith('MON') || u.startsWith('TUE') || u.startsWith('WED') || u.startsWith('THU') || u.startsWith('FRI') || u.startsWith('SAT') || u.startsWith('SUN') || /^\d{1,2}[\/\-]\d{1,2}/.test(u);
-        });
-
-        if (isDetailed2Col) {
-            let totalSellSum = 0;
-            let totalPaySum = 0;
-            let hasCommLine = false;
-            let hasShareLine = false;
-            let hasPagarLine = false;
-
-            lines.forEach(l => {
-                const clean = l.replace(/\*/g, '').trim();
-                const upper = clean.toUpperCase();
-                const isDayRow = upper.startsWith('MON') || upper.startsWith('TUE') || upper.startsWith('WED') ||
-                                 upper.startsWith('THU') || upper.startsWith('FRI') || upper.startsWith('SAT') || upper.startsWith('SUN') ||
-                                 /^\d{1,2}[\/\-]\d{1,2}/.test(clean);
-
-                if (isDayRow && !upper.includes('TOTAL') && !upper.includes('धंदा') && !upper.includes('PAYMENT')) {
-                    const { sell, pay } = extractRowNumbers(clean);
-                    totalSellSum += sell;
-                    totalPaySum += pay;
-                } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
-                    hasCommLine = true;
-                    const match = clean.match(/\(?(\d+(\.\d+)?)%\)?/i);
-                    if (match && match[1]) commPct = parseFloat(match[1]);
-                } else if (upper.includes('SHARE (') || (upper.includes('(') && upper.includes('%)'))) {
-                    hasShareLine = true;
-                    const match = clean.match(/\(?(\d+(\.\d+)?)%\)?/i);
-                    if (match && match[1]) sharePct = parseFloat(match[1]);
-                } else if (upper.includes('PAGAR')) {
-                    hasPagarLine = true;
-                } else if (upper.includes('MAGIL YENE')) {
-                    if (!magilYeneHasField && magilYeneVal === 0) {
-                        const { sell, pay } = extractRowNumbers(clean);
-                        magilYeneVal = sell || pay;
-                    }
-                } else if (upper.includes('MAGIL DENE')) {
-                    if (!magilDeneHasField && magilDeneVal === 0) {
-                        const { sell, pay } = extractRowNumbers(clean);
-                        magilDeneVal = sell || pay;
-                    }
-                } else if (upper.includes('MISS') || upper.includes('FARAK') || upper.startsWith('MP :-')) {
-                    if (!missHasField && missPaymentVal === 0) {
-                        const { sell, pay } = extractRowNumbers(clean);
-                        missPaymentVal = pay || sell;
-                    }
-                }
-            });
-
-            const netAfterPayment = totalSellSum - totalPaySum;
-            const commVal = hasCommLine && commPct > 0 ? Math.round(totalSellSum * (commPct / 100)) : 0;
-            const netAfterComm = netAfterPayment - commVal;
-
-            let pagarVal = 0;
-            const pagarEl = document.getElementById('editWeeklyPagar');
-            if (pagarEl && pagarEl.value !== '') {
-                pagarVal = parseFloat(pagarEl.value) || 0;
-            } else if (hasPagarLine) {
-                const pagarLine = lines.find(l => l.toUpperCase().includes('PAGAR'));
-                if (pagarLine) pagarVal = extractRowNumbers(pagarLine.replace(/\*/g, '')).sell;
-            }
-            const netAfterPagar = netAfterComm - pagarVal;
-
-            const shareVal = (hasShareLine && sharePct > 0) ? Math.round(netAfterPagar * (sharePct / 100)) : 0;
-            const netAfterShare = (hasShareLine && shareVal > 0) ? netAfterPagar - shareVal : netAfterPagar;
-            const netAfterMp = netAfterShare - missPaymentVal;
-
-            const finalBal = netAfterMp + magilYeneVal - magilDeneVal;
-
-            // Build reconstructed lines in exact order
-            let resultLines = [];
-
-            lines.forEach(l => {
-                const clean = l.replace(/\*/g, '').trim();
-                const upper = clean.toUpperCase();
-                const isDayRow = upper.startsWith('MON') || upper.startsWith('TUE') || upper.startsWith('WED') ||
-                                 upper.startsWith('THU') || upper.startsWith('FRI') || upper.startsWith('SAT') || upper.startsWith('SUN') ||
-                                 /^\d{1,2}[\/\-]\d{1,2}/.test(clean);
-                if (upper.startsWith('DATE:') || upper.startsWith('*DATE:') || isDayRow || upper.includes('SELL*') || upper.includes('PAYMENT*')) {
-                    resultLines.push(l);
-                }
-            });
-
-            resultLines.push('----------------------------------');
-            resultLines.push(`*TOTAL :-*            ${totalSellSum.toLocaleString('en-IN')}     ${totalPaySum.toLocaleString('en-IN')}`);
-
-            if (totalPaySum > 0) {
-                resultLines.push(`*- PAYMENT :-*                   -${totalPaySum.toLocaleString('en-IN')}`);
-                resultLines.push('----------------------------------');
-                resultLines.push(`*TOTAL :-*            ${netAfterPayment.toLocaleString('en-IN')}`);
-            }
-
-            if (hasCommLine && commVal > 0) {
-                resultLines.push('----------------------------------');
-                resultLines.push(`*COM (${commPct}%) :-*                    -${commVal.toLocaleString('en-IN')}`);
-                resultLines.push('----------------------------------');
-                resultLines.push(`*TOTAL :-*            ${netAfterComm.toLocaleString('en-IN')}`);
-            }
-
-            if (pagarVal > 0) {
-                resultLines.push('----------------------------------');
-                resultLines.push(`*PAGAR :-*                        -${pagarVal.toLocaleString('en-IN')}`);
-                resultLines.push('----------------------------------');
-                resultLines.push(`*TOTAL :-*            ${netAfterPagar.toLocaleString('en-IN')}`);
-            }
-
-            if (hasShareLine && shareVal > 0) {
-                resultLines.push('----------------------------------');
-                resultLines.push(`*(${sharePct}%) :-*                       -${shareVal.toLocaleString('en-IN')}`);
-                resultLines.push('----------------------------------');
-                resultLines.push(`*TOTAL :-*            ${netAfterShare.toLocaleString('en-IN')} ${netAfterShare >= 0 ? 'yeṇe' : 'dene'}`);
-            }
-
-            if (missPaymentVal > 0) {
-                resultLines.push('----------------------------------');
-                resultLines.push(`*MISS PAYMENT :-*                 -${missPaymentVal.toLocaleString('en-IN')}`);
-                resultLines.push('----------------------------------');
-                resultLines.push(`*TOTAL :-*            ${netAfterMp.toLocaleString('en-IN')} ${netAfterMp >= 0 ? 'yeṇe' : 'dene'}`);
-            }
-
-            if (magilYeneVal > 0) {
-                resultLines.push('----------------------------------');
-                resultLines.push(`🔴 *MAGIL YENE :-*                +${magilYeneVal.toLocaleString('en-IN')} yeṇe`);
-            } else if (magilDeneVal > 0) {
-                resultLines.push('----------------------------------');
-                resultLines.push(`🔴 *MAGIL DENE :-*                -${magilDeneVal.toLocaleString('en-IN')} dene`);
-            }
-
-            resultLines.push('==================================');
-            resultLines.push(`TOTAL BALANCE DUE ${Math.abs(finalBal).toLocaleString('en-IN')} ${finalBal >= 0 ? 'yeṇe' : 'dene'}`);
-
-            return resultLines.join('\n');
-        }
-
-        // Standard 7-Day Net Trade Weekly Format
-        let weeklySum = 0;
         lines.forEach(l => {
             const clean = l.replace(/\*/g, '').trim();
             const upper = clean.toUpperCase();
@@ -2716,26 +2387,21 @@ function updateCalculatedValuesInText(text) {
                     if (commMatch && commMatch[1]) commPct = parseFloat(commMatch[1]);
                 }
             } else if (upper.includes('MAGIL YENE')) {
-                if (!magilYeneHasField && magilYeneVal === 0) {
+                if (magilYeneVal === 0) {
                     const { sell, pay } = extractRowNumbers(clean);
                     magilYeneVal = sell || pay;
                 }
             } else if (upper.includes('MAGIL DENE')) {
-                if (!magilDeneHasField && magilDeneVal === 0) {
+                if (magilDeneVal === 0) {
                     const { sell, pay } = extractRowNumbers(clean);
                     magilDeneVal = sell || pay;
                 }
             } else if (upper.includes('MAGIL')) {
                 const { sell, pay } = extractRowNumbers(clean);
                 if (upper.includes('DENE')) {
-                    if (!magilDeneHasField && magilDeneVal === 0) magilDeneVal = sell || pay;
+                    if (magilDeneVal === 0) magilDeneVal = sell || pay;
                 } else {
-                    if (!magilYeneHasField && magilYeneVal === 0) magilYeneVal = sell || pay;
-                }
-            } else if (upper.includes('MISS') || upper.includes('FARAK')) {
-                if (!missHasField && missPaymentVal === 0) {
-                    const { sell, pay } = extractRowNumbers(clean);
-                    missPaymentVal = pay || sell;
+                    if (magilYeneVal === 0) magilYeneVal = sell || pay;
                 }
             }
         });
@@ -2746,7 +2412,7 @@ function updateCalculatedValuesInText(text) {
         }
 
         let netWeekly = weeklySum >= 0 ? (weeklySum - commVal) : (weeklySum + commVal);
-        let finalNet = netWeekly + magilYeneVal - magilDeneVal + missPaymentVal;
+        let finalNet = netWeekly + magilYeneVal - magilDeneVal;
 
         let statusStr = netWeekly >= 0 ? 'yeṇe' : 'dene';
         let absNetStr = Math.abs(netWeekly).toLocaleString('en-IN');
@@ -2791,10 +2457,6 @@ function updateCalculatedValuesInText(text) {
                     if (magilDeneVal > 0) newLines.push(`🔴 *MAGIL DENE :-*   ${magilDeneVal.toLocaleString('en-IN')} dene`);
                 } else {
                     if (magilYeneVal > 0) newLines.push(`🔴 *MAGIL YENE :-*   ${magilYeneVal.toLocaleString('en-IN')} yeṇe`);
-                }
-            } else if (upper.includes('MISS') || upper.includes('FARAK')) {
-                if (missPaymentVal > 0) {
-                    newLines.push(`🔴 *MISS PAYMENT / FARAK :-*   ${missPaymentVal.toLocaleString('en-IN')}`);
                 }
             } else if (upper.includes('TOTAL BALANCE DUE')) {
                 newLines.push(`TOTAL BALANCE DUE ${absFinalNetStr} ${finalStatusStr}`);
@@ -2866,9 +2528,8 @@ function updateCalculatedValuesInText(text) {
     }
 
     const totalAfterComm = totalSell - commVal;
-    const remaining = totalAfterComm - totalPay;
-    const subtotal = remaining - missPaymentVal - pagarVal;
-    const netBal = subtotal + magilYeneVal - magilDeneVal;
+    const remaining = totalAfterComm - totalPay - pagarVal - missPaymentVal;
+    const netBal = remaining + magilYeneVal - magilDeneVal;
     const balSuffix = netBal >= 0 ? 'yeṇe' : 'dene';
     const absBalStr = Math.abs(netBal).toLocaleString('en-IN');
 
@@ -2883,15 +2544,11 @@ function updateCalculatedValuesInText(text) {
                 return line.replace(/:-.*/, `:- ${totalSell.toLocaleString('en-IN')} : ${totalPay.toLocaleString('en-IN')}`);
             } else if (totalCount === 2) {
                 return line.replace(/:-.*/, `:- ${totalAfterComm.toLocaleString('en-IN')}`);
-            } else if (totalCount === 3) {
-                return line.replace(/:-.*/, `:- ${Math.abs(subtotal).toLocaleString('en-IN')}`);
             }
         } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
             return line.replace(/:-.*/, `:- ${commVal.toLocaleString('en-IN')}`);
         } else if (upper.startsWith('REMAINING :-') || upper.startsWith('REMAINING:')) {
             return line.replace(/:-.*/, `:- ${remaining.toLocaleString('en-IN')}`);
-        } else if (upper.startsWith('SUBTOTAL :-') || upper.startsWith('SUBTOTAL:')) {
-            return line.replace(/:-.*/, `:- ${Math.abs(subtotal).toLocaleString('en-IN')}`);
         } else if (upper.includes('TOTAL BALANCE DUE')) {
             return line.replace(/TOTAL BALANCE DUE.*/i, `TOTAL BALANCE DUE ${absBalStr} ${balSuffix}`);
         }
@@ -2936,7 +2593,7 @@ function populateQuickFieldsFromText(text) {
             } else {
                 magilYene = sell;
             }
-        } else if (upper.includes('MISS') || upper.includes('FARAK')) {
+        } else if (upper.includes('MISS')) {
             const { sell, pay } = extractRowNumbers(clean);
             missPayment = pay || sell;
         } else if (upper.includes('COM (') || upper.includes('COMMISSION')) {
@@ -2955,34 +2612,17 @@ function populateQuickFieldsFromText(text) {
     if (document.getElementById('editWeeklyComm')) document.getElementById('editWeeklyComm').value = (weeklyComm > 0) ? weeklyComm : '';
     if (document.getElementById('editWeeklyMagilYene')) document.getElementById('editWeeklyMagilYene').value = (magilYene !== null && !isNaN(magilYene) && magilYene > 0) ? magilYene : '';
     if (document.getElementById('editWeeklyMagilDene')) document.getElementById('editWeeklyMagilDene').value = (magilDene !== null && !isNaN(magilDene) && magilDene > 0) ? magilDene : '';
-    if (document.getElementById('editWeeklyMissPayment')) document.getElementById('editWeeklyMissPayment').value = (missPayment !== null && !isNaN(missPayment) && missPayment > 0) ? missPayment : '';
-}
-
-function getQuickFieldValue(weeklyId, dailyId) {
-    const elW = document.getElementById(weeklyId);
-    const elD = document.getElementById(dailyId);
-
-    const isWVisible = elW && elW.parentElement && elW.parentElement.parentElement && elW.parentElement.parentElement.style.display !== 'none';
-    if (isWVisible) {
-        return (elW.value !== '' && !isNaN(parseFloat(elW.value))) ? parseFloat(elW.value) : 0;
-    }
-    if (elD) {
-        return (elD.value !== '' && !isNaN(parseFloat(elD.value))) ? parseFloat(elD.value) : 0;
-    }
-    return 0;
 }
 
 window.onWeeklyQuickFieldEdited = function() {
-    const magilYene = getQuickFieldValue('editWeeklyMagilYene', 'editMagilYene');
-    const magilDene = getQuickFieldValue('editWeeklyMagilDene', 'editMagilDene');
-    const missPayment = getQuickFieldValue('editWeeklyMissPayment', 'editMissPayment');
+    const magilYene = parseFloat(document.getElementById('editWeeklyMagilYene')?.value || 0) || 0;
+    const magilDene = parseFloat(document.getElementById('editWeeklyMagilDene')?.value || 0) || 0;
 
     let text = document.getElementById('waReceiptEditText')?.value || currentFormattedMessage || '';
     let lines = text.split('\n');
 
     let hasMagilYene = false;
     let hasMagilDene = false;
-    let hasMiss = false;
 
     let updatedLines = lines.map(line => {
         const clean = line.replace(/\*/g, '').trim();
@@ -3006,10 +2646,6 @@ window.onWeeklyQuickFieldEdited = function() {
                 if (magilYene > 0) return `🔴 *MAGIL YENE :-*   ${magilYene.toLocaleString('en-IN')} yeṇe`;
                 return null;
             }
-        } else if (upper.includes('MISS PAYMENT') || upper.includes('FARAK')) {
-            hasMiss = true;
-            if (missPayment > 0) return `*MISS PAYMENT / FARAK :-*   ${missPayment.toLocaleString('en-IN')}`;
-            return null;
         }
         return line;
     }).filter(l => l !== null && l !== undefined);
@@ -3025,10 +2661,6 @@ window.onWeeklyQuickFieldEdited = function() {
         updatedLines.splice(insertIdx, 0, `🔴 *MAGIL DENE :-*   ${magilDene.toLocaleString('en-IN')} dene`);
         insertIdx++;
     }
-    if (!hasMiss && missPayment > 0) {
-        updatedLines.splice(insertIdx, 0, `*MISS PAYMENT / FARAK :-*   ${missPayment.toLocaleString('en-IN')}`);
-        insertIdx++;
-    }
 
     let newText = updatedLines.join('\n');
     newText = updateCalculatedValuesInText(newText);
@@ -3041,15 +2673,6 @@ window.onWeeklyQuickFieldEdited = function() {
 };
 
 function onQuickFieldEdited() {
-    const text = document.getElementById('waReceiptEditText')?.value || currentFormattedMessage || '';
-    const modalTitleText = document.getElementById('waCustomerName')?.textContent || '';
-    const isWeekly = (currentSegment === 'weekly') || 
-                     modalTitleText.toLowerCase().includes('weekly') ||
-                     text.toUpperCase().includes('MON :-') || text.toUpperCase().includes('TUE :-') || text.toUpperCase().includes('WEEKLY');
-    if (isWeekly) {
-        return onWeeklyQuickFieldEdited();
-    }
-
     const sellPo = parseFloat(document.getElementById('editPoSell') ? document.getElementById('editPoSell').value : 0) || 0;
     const payPo = parseFloat(document.getElementById('editPoPay') ? document.getElementById('editPoPay').value : 0) || 0;
     const sellPc = parseFloat(document.getElementById('editPcSell') ? document.getElementById('editPcSell').value : 0) || 0;
@@ -3058,9 +2681,10 @@ function onQuickFieldEdited() {
     const magilDene = parseFloat(document.getElementById('editMagilDene') ? document.getElementById('editMagilDene').value : 0) || 0;
     const missPayment = parseFloat(document.getElementById('editMissPayment') ? document.getElementById('editMissPayment').value : 0) || 0;
 
+    let text = document.getElementById('waReceiptEditText').value || currentFormattedMessage || '';
     let lines = text.split('\n');
 
-    let hasMagilYene = false, hasMagilDene = false, hasMiss = false, hasSubtotal = false;
+    let hasMagilYene = false, hasMagilDene = false, hasMiss = false;
 
     let updatedLines = lines.map(line => {
         const clean = line.replace(/\*/g, '').trim();
@@ -3072,29 +2696,25 @@ function onQuickFieldEdited() {
             return line.replace(/:-.*/, `:- ${sellPc.toLocaleString('en-IN')} : ${payPc.toLocaleString('en-IN')}`);
         } else if (upper.includes('MAGIL YENE')) {
             hasMagilYene = true;
-            if (magilYene > 0) return `🔴 *MAGIL YENE :-*   ${magilYene.toLocaleString('en-IN')} yeṇe`;
+            if (magilYene > 0) return `🔴 *MAGIL YENE:* *${magilYene.toLocaleString('en-IN')}*`;
             return null;
         } else if (upper.includes('MAGIL DENE')) {
             hasMagilDene = true;
-            if (magilDene > 0) return `🔴 *MAGIL DENE :-*   ${magilDene.toLocaleString('en-IN')} dene`;
+            if (magilDene > 0) return `🔴 *MAGIL DENE:* *${magilDene.toLocaleString('en-IN')}*`;
             return null;
         } else if (upper.includes('MAGIL')) {
             if (upper.includes('DENE')) {
                 hasMagilDene = true;
-                if (magilDene > 0) return `🔴 *MAGIL DENE :-*   ${magilDene.toLocaleString('en-IN')} dene`;
+                if (magilDene > 0) return `🔴 *MAGIL DENE:* *${magilDene.toLocaleString('en-IN')}*`;
                 return null;
             } else {
                 hasMagilYene = true;
-                if (magilYene > 0) return `🔴 *MAGIL YENE :-*   ${magilYene.toLocaleString('en-IN')} yeṇe`;
+                if (magilYene > 0) return `🔴 *MAGIL YENE:* *${magilYene.toLocaleString('en-IN')}*`;
                 return null;
             }
         } else if (upper.includes('MISS')) {
             hasMiss = true;
-            if (missPayment > 0) return `*MISS PAYMENT :-*    ${missPayment.toLocaleString('en-IN')}`;
-            return null;
-        } else if (upper.includes('SUBTOTAL')) {
-            hasSubtotal = true;
-            if (missPayment > 0) return line;
+            if (missPayment > 0) return `*MISS PAYMENT :-* ${missPayment.toLocaleString('en-IN')}`;
             return null;
         }
         return line;
@@ -3104,17 +2724,15 @@ function onQuickFieldEdited() {
     if (insertIdx === -1) insertIdx = updatedLines.length;
 
     if (!hasMiss && missPayment > 0) {
-        updatedLines.splice(insertIdx, 0, `*MISS PAYMENT :-*    ${missPayment.toLocaleString('en-IN')}`);
-        insertIdx++;
-        updatedLines.splice(insertIdx, 0, `*SUBTOTAL :-*         0`);
+        updatedLines.splice(insertIdx, 0, `*MISS PAYMENT :-* ${missPayment.toLocaleString('en-IN')}`);
         insertIdx++;
     }
     if (!hasMagilYene && magilYene > 0) {
-        updatedLines.splice(insertIdx, 0, `🔴 *MAGIL YENE :-*   ${magilYene.toLocaleString('en-IN')} yeṇe`);
+        updatedLines.splice(insertIdx, 0, `🔴 *MAGIL YENE:* *${magilYene.toLocaleString('en-IN')}*`);
         insertIdx++;
     }
     if (!hasMagilDene && magilDene > 0) {
-        updatedLines.splice(insertIdx, 0, `🔴 *MAGIL DENE :-*   ${magilDene.toLocaleString('en-IN')} dene`);
+        updatedLines.splice(insertIdx, 0, `🔴 *MAGIL DENE:* *${magilDene.toLocaleString('en-IN')}*`);
         insertIdx++;
     }
 
@@ -3126,7 +2744,7 @@ function onQuickFieldEdited() {
     if (editText) editText.value = newText;
 
     renderReceiptImageCanvas(newText, currentCustomerName);
-};
+}
 
 function onReceiptTextEdited() {
     const editText = document.getElementById('waReceiptEditText');
@@ -3397,83 +3015,6 @@ async function deleteUserAccess(id) {
     }
 }
 
-// --- Dedicated Weekly Settings Modal Handlers ---
-window.openWeeklyEditModal = async function(custId) {
-    const customer = (window.customersData || customersData || []).find(c => c.id == custId);
-    if (!customer) return;
-
-    const isWeekly30Checked = (customer.weeklyShare30ProfitOnly === true || customer.weeklyShare30ProfitOnly === 'true');
-
-    if (document.getElementById('editWeeklyCustId')) document.getElementById('editWeeklyCustId').value = customer.id;
-    if (document.getElementById('weeklyEditTitle')) document.getElementById('weeklyEditTitle').textContent = `✏️ Weekly Settings: ${customer.name}`;
-    if (document.getElementById('weeklyCommInput')) {
-        document.getElementById('weeklyCommInput').value = (customer.weeklyCommissionRate != null && customer.weeklyCommissionRate > 0) ? customer.weeklyCommissionRate : '';
-    }
-    if (document.getElementById('weeklyPagarModalInput')) {
-        document.getElementById('weeklyPagarModalInput').value = (customer.weeklyPagar != null && customer.weeklyPagar > 0) ? customer.weeklyPagar : '';
-    }
-    if (document.getElementById('weeklyShareRateModalInput')) {
-        document.getElementById('weeklyShareRateModalInput').value = (customer.weeklyShareRate != null && customer.weeklyShareRate > 0 && customer.weeklyShareRate < 100) ? customer.weeklyShareRate : '';
-    }
-    if (document.getElementById('weeklyShare30ModalChk')) document.getElementById('weeklyShare30ModalChk').checked = isWeekly30Checked;
-    if (document.getElementById('weeklyShare30Val')) document.getElementById('weeklyShare30Val').value = customer.weeklyShare30ProfitOnlyRate != null ? customer.weeklyShare30ProfitOnlyRate : 30.0;
-    if (document.getElementById('weeklyShare30Container')) document.getElementById('weeklyShare30Container').style.display = isWeekly30Checked ? 'block' : 'none';
-
-    openModal('weeklyEditModal');
-};
-
-window.saveWeeklyCommission = async function() {
-    const custId = document.getElementById('editWeeklyCustId') ? document.getElementById('editWeeklyCustId').value : '';
-    if (!custId) return;
-
-    const commRaw = document.getElementById('weeklyCommInput')?.value?.trim();
-    const pagarRaw = document.getElementById('weeklyPagarModalInput')?.value?.trim();
-    const shareRaw = document.getElementById('weeklyShareRateModalInput')?.value?.trim();
-
-    const commRate = (commRaw !== '' && !isNaN(parseFloat(commRaw))) ? parseFloat(commRaw) : 0;
-    const pagarVal = (pagarRaw !== '' && !isNaN(parseFloat(pagarRaw))) ? parseFloat(pagarRaw) : 0;
-    const shareRate = (shareRaw !== '' && !isNaN(parseFloat(shareRaw))) ? parseFloat(shareRaw) : 0;
-
-    const share30 = document.getElementById('weeklyShare30ModalChk') ? document.getElementById('weeklyShare30ModalChk').checked : false;
-    const share30Rate = parseFloat(document.getElementById('weeklyShare30Val')?.value) || 30.0;
-
-    const payload = {
-        weeklyCommissionEnabled: commRate > 0,
-        weeklyCommissionRate: commRate,
-        weeklyPagarEnabled: pagarVal > 0,
-        weeklyPagar: pagarVal,
-        weeklyShareEnabled: shareRate > 0 && shareRate < 100,
-        weeklyShareRate: shareRate,
-        weeklyShare30ProfitOnly: share30,
-        weeklyShare30ProfitOnlyRate: share30Rate
-    };
-
-    try {
-        const res = await fetch(`/api/customers/${custId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-            closeModal('weeklyEditModal');
-            await loadCustomers('', getSelectedMarket());
-            if (typeof loadWeeklyReceipts === 'function') {
-                await loadWeeklyReceipts();
-            }
-            if (typeof shareWeeklyWhatsApp === 'function') {
-                await shareWeeklyWhatsApp(custId);
-            }
-            alert('✅ Weekly settings saved & receipt updated live!');
-        } else {
-            alert('❌ Failed to save weekly settings.');
-        }
-    } catch (err) {
-        console.error('Error saving weekly settings:', err);
-        alert('❌ Error saving weekly settings.');
-    }
-};
-
 // Bind functions to window object for HTML onclick handlers
 window.openUserAccessModal = openUserAccessModal;
 window.saveAccessSettings = saveAccessSettings;
@@ -3481,14 +3022,6 @@ window.loadUserAccessList = loadUserAccessList;
 window.approveUserAccess = approveUserAccess;
 window.togglePauseUserAccess = togglePauseUserAccess;
 window.deleteUserAccess = deleteUserAccess;
-window.triggerWhatsApp = triggerWhatsApp;
-window.editCustomer = editCustomer;
-window.deleteCustomer = deleteCustomer;
-window.onQuickFieldEdited = onQuickFieldEdited;
-window.selectCustomerRow = typeof selectCustomerRow === 'function' ? selectCustomerRow : function(id) { const s = document.getElementById('selectCustomer'); if (s) { s.value = id; s.dispatchEvent(new Event('change')); } };
-window.openAddCustomerModal = typeof openAddCustomerModal === 'function' ? openAddCustomerModal : function() { openModal('customerModal'); };
-window.openModal = openModal;
-window.closeModal = closeModal;
 
 // Real-Time Auto-Logout Poller for Regular Users (Checks operating hours & access status every 3 seconds)
 setInterval(async () => {

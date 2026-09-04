@@ -62,6 +62,30 @@ public class Customer {
 
     private Boolean share30ProfitOnly = false;
 
+    @Column(precision = 5, scale = 2)
+    private BigDecimal share30ProfitOnlyRate = new BigDecimal("30.00");
+
+    // Dedicated Weekly Settings
+    private Boolean weeklyCommissionEnabled = false;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal weeklyCommissionRate = BigDecimal.ZERO;
+
+    private Boolean weeklyPagarEnabled = false;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal weeklyPagar = BigDecimal.ZERO;
+
+    private Boolean weeklyShareEnabled = false;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal weeklyShareRate = new BigDecimal("40.00");
+
+    private Boolean weeklyShare30ProfitOnly = false;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal weeklyShare30ProfitOnlyRate = new BigDecimal("30.00");
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public Customer() {}
@@ -131,6 +155,33 @@ public class Customer {
 
     public Boolean getShare30ProfitOnly() { return share30ProfitOnly != null ? share30ProfitOnly : false; }
     public void setShare30ProfitOnly(Boolean share30ProfitOnly) { this.share30ProfitOnly = share30ProfitOnly; }
+
+    public BigDecimal getShare30ProfitOnlyRate() { return share30ProfitOnlyRate != null ? share30ProfitOnlyRate : new BigDecimal("30.00"); }
+    public void setShare30ProfitOnlyRate(BigDecimal share30ProfitOnlyRate) { this.share30ProfitOnlyRate = share30ProfitOnlyRate; }
+
+    public Boolean getWeeklyCommissionEnabled() { return weeklyCommissionEnabled != null ? weeklyCommissionEnabled : false; }
+    public void setWeeklyCommissionEnabled(Boolean weeklyCommissionEnabled) { this.weeklyCommissionEnabled = weeklyCommissionEnabled; }
+
+    public BigDecimal getWeeklyCommissionRate() { return weeklyCommissionRate != null ? weeklyCommissionRate : BigDecimal.ZERO; }
+    public void setWeeklyCommissionRate(BigDecimal weeklyCommissionRate) { this.weeklyCommissionRate = weeklyCommissionRate; }
+
+    public Boolean getWeeklyPagarEnabled() { return weeklyPagarEnabled != null ? weeklyPagarEnabled : false; }
+    public void setWeeklyPagarEnabled(Boolean weeklyPagarEnabled) { this.weeklyPagarEnabled = weeklyPagarEnabled; }
+
+    public BigDecimal getWeeklyPagar() { return weeklyPagar != null ? weeklyPagar : BigDecimal.ZERO; }
+    public void setWeeklyPagar(BigDecimal weeklyPagar) { this.weeklyPagar = weeklyPagar; }
+
+    public Boolean getWeeklyShareEnabled() { return weeklyShareEnabled != null ? weeklyShareEnabled : false; }
+    public void setWeeklyShareEnabled(Boolean weeklyShareEnabled) { this.weeklyShareEnabled = weeklyShareEnabled; }
+
+    public BigDecimal getWeeklyShareRate() { return weeklyShareRate != null ? weeklyShareRate : new BigDecimal("40.00"); }
+    public void setWeeklyShareRate(BigDecimal weeklyShareRate) { this.weeklyShareRate = weeklyShareRate; }
+
+    public Boolean getWeeklyShare30ProfitOnly() { return weeklyShare30ProfitOnly != null ? weeklyShare30ProfitOnly : false; }
+    public void setWeeklyShare30ProfitOnly(Boolean weeklyShare30ProfitOnly) { this.weeklyShare30ProfitOnly = weeklyShare30ProfitOnly; }
+
+    public BigDecimal getWeeklyShare30ProfitOnlyRate() { return weeklyShare30ProfitOnlyRate != null ? weeklyShare30ProfitOnlyRate : new BigDecimal("30.00"); }
+    public void setWeeklyShare30ProfitOnlyRate(BigDecimal weeklyShare30ProfitOnlyRate) { this.weeklyShare30ProfitOnlyRate = weeklyShare30ProfitOnlyRate; }
 
     @Transient
     private BigDecimal todayNet = BigDecimal.ZERO;

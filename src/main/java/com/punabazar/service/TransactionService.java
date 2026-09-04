@@ -177,6 +177,18 @@ public class TransactionService {
         BigDecimal farakVal = request.getFarak() != null ? request.getFarak() : (tx.getFarak() != null ? tx.getFarak() : BigDecimal.ZERO);
         tx.setFarak(farakVal);
         transactionRepository.save(tx);
+
+        if (magilBaki.compareTo(BigDecimal.ZERO) > 0) {
+            customer.setYene(magilBaki);
+            customer.setDene(BigDecimal.ZERO);
+            customer.setMagilBaki(magilBaki);
+        } else if (magilBaki.compareTo(BigDecimal.ZERO) < 0) {
+            customer.setDene(magilBaki.abs());
+            customer.setYene(BigDecimal.ZERO);
+            customer.setMagilBaki(magilBaki.abs());
+        }
+        customer.setFarak(farakVal);
+
         BigDecimal shareRateVal = request.getShareRate() != null ? request.getShareRate() : (customer.getShareRate() != null ? customer.getShareRate() : new BigDecimal("100.00"));
         Boolean share30Val = customer.getShare30ProfitOnly();
 
