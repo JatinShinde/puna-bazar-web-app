@@ -346,10 +346,22 @@ public class WhatsAppService {
             BigDecimal runningNet1 = afterPayVal;
             sb.append("*REMAINING:-       ").append(fmtNum(runningNet1)).append("*\n");
 
-            if (farakVal != null && farakVal.compareTo(BigDecimal.ZERO) != 0) {
+            boolean hasFarak = (farakVal != null && farakVal.compareTo(BigDecimal.ZERO) != 0);
+            boolean hasPagar = (pagarVal != null && pagarVal.compareTo(BigDecimal.ZERO) > 0);
+
+            if (hasFarak) {
                 sb.append("---------------------------------\n");
                 sb.append("*MISS PAYMENT:-    ").append(fmtNum(farakVal)).append("*\n");
                 runningNet1 = runningNet1.subtract(farakVal);
+            }
+
+            if (hasPagar) {
+                sb.append("---------------------------------\n");
+                sb.append("*PAGAR:-        ").append(fmtNum(pagarVal)).append("*\n");
+                runningNet1 = runningNet1.subtract(pagarVal);
+            }
+
+            if (hasFarak || hasPagar) {
                 sb.append("---------------------------------\n");
                 sb.append("*TOTAL:-           ").append(fmtNum(runningNet1)).append("*\n");
             }
@@ -374,14 +386,9 @@ public class WhatsAppService {
                     sb.append("*(").append(effectiveShareRate.stripTrailingZeros().toPlainString()).append("%):-           ").append(fmtNum(shareAmount)).append("*\n");
                     runningNet1 = runningNet1.subtract(shareAmount);
                     sb.append("---------------------------------\n");
-                    sb.append("*TOTAL:-           ").append(fmtNum(runningNet1)).append(" yene*\n");
+                    String todaySuffix = runningNet1.compareTo(BigDecimal.ZERO) < 0 ? " dene" : " yeṇe";
+                    sb.append("*TOTAL:-           ").append(fmtNum(runningNet1)).append(todaySuffix).append("*\n");
                 }
-            }
-
-            if (pagarVal != null && pagarVal.compareTo(BigDecimal.ZERO) > 0) {
-                sb.append("---------------------------------\n");
-                sb.append("*PAGAR:-        ").append(fmtNum(pagarVal)).append("*\n");
-                runningNet1 = runningNet1.subtract(pagarVal);
             }
 
             BigDecimal todayNet = runningNet1;

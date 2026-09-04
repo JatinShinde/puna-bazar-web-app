@@ -1978,14 +1978,46 @@ window.saveEditedReceipt = async function() {
     }
 
     // --- 2. DAILY RECEIPT UPDATE (Updates Today's Trade Entry) ---
-    const poSell = parseFloat(document.getElementById('editPoSell') ? document.getElementById('editPoSell').value : 0) || 0;
-    const poPay = parseFloat(document.getElementById('editPoPay') ? document.getElementById('editPoPay').value : 0) || 0;
-    const pcSell = parseFloat(document.getElementById('editPcSell') ? document.getElementById('editPcSell').value : 0) || 0;
-    const pcPay = parseFloat(document.getElementById('editPcPay') ? document.getElementById('editPcPay').value : 0) || 0;
-    const magilYene = parseFloat(document.getElementById('editMagilYene') ? document.getElementById('editMagilYene').value : 0) || 0;
-    const magilDene = parseFloat(document.getElementById('editMagilDene') ? document.getElementById('editMagilDene').value : 0) || 0;
-    const missPayment = parseFloat(document.getElementById('editMissPayment') ? document.getElementById('editMissPayment').value : 0) || 0;
+    let customerObj = null;
+    if (window.customersData && window.customersData.length > 0) {
+        customerObj = window.customersData.find(c => c.id == custId);
+    }
+
+    let poSell = parseFloat(document.getElementById('editPoSell') ? document.getElementById('editPoSell').value : 0) || 0;
+    let poPay = parseFloat(document.getElementById('editPoPay') ? document.getElementById('editPoPay').value : 0) || 0;
+    let pcSell = parseFloat(document.getElementById('editPcSell') ? document.getElementById('editPcSell').value : 0) || 0;
+    let pcPay = parseFloat(document.getElementById('editPcPay') ? document.getElementById('editPcPay').value : 0) || 0;
+    let magilYene = parseFloat(document.getElementById('editMagilYene') ? document.getElementById('editMagilYene').value : 0) || 0;
+    let magilDene = parseFloat(document.getElementById('editMagilDene') ? document.getElementById('editMagilDene').value : 0) || 0;
+    let missPayment = parseFloat(document.getElementById('editMissPayment') ? document.getElementById('editMissPayment').value : 0) || 0;
     const txDate = document.getElementById('txDate') ? document.getElementById('txDate').value : new Date().toISOString().split('T')[0];
+
+    // Fallback parsing from textVal if quick fields are 0
+    if (textVal) {
+        const textLines = textVal.split('\n');
+        textLines.forEach(l => {
+            const clean = l.replace(/\*/g, '').trim();
+            const upper = clean.toUpperCase();
+            if (upper.startsWith('PO :-') || upper.startsWith('PO:')) {
+                const { sell, pay } = extractRowNumbers(clean);
+                if (poSell === 0 && sell) poSell = sell;
+                if (poPay === 0 && pay) poPay = pay;
+            } else if (upper.startsWith('PC :-') || upper.startsWith('PC:')) {
+                const { sell, pay } = extractRowNumbers(clean);
+                if (pcSell === 0 && sell) pcSell = sell;
+                if (pcPay === 0 && pay) pcPay = pay;
+            } else if (upper.includes('MAGIL YENE')) {
+                const { sell, pay } = extractRowNumbers(clean);
+                if (magilYene === 0) magilYene = sell || pay;
+            } else if (upper.includes('MAGIL DENE')) {
+                const { sell, pay } = extractRowNumbers(clean);
+                if (magilDene === 0) magilDene = sell || pay;
+            } else if (upper.includes('MISS') || upper.includes('FARAK')) {
+                const { sell, pay } = extractRowNumbers(clean);
+                if (missPayment === 0) missPayment = pay || sell;
+            }
+        });
+    }
 
     const styleEl = document.getElementById('tradeReceiptStyle');
     const style = styleEl && styleEl.value ? styleEl.value : (customerObj ? customerObj.receiptStyle : 'TYPE_1');
