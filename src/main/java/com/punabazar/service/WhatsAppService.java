@@ -344,8 +344,7 @@ public class WhatsAppService {
             sb.append("---------------------------------\n");
 
             BigDecimal runningNet1 = afterPayVal;
-            String remSuffix = runningNet1.compareTo(BigDecimal.ZERO) < 0 ? " dene" : (runningNet1.compareTo(BigDecimal.ZERO) > 0 ? " yene" : "");
-            sb.append("*REMAINING:-       ").append(fmtNum(runningNet1)).append(remSuffix).append("*\n");
+            sb.append("*REMAINING:-       ").append(fmtNum(runningNet1)).append("*\n");
 
             if (farakVal != null && farakVal.compareTo(BigDecimal.ZERO) != 0) {
                 sb.append("---------------------------------\n");

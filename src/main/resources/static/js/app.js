@@ -2166,14 +2166,10 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
             const valStr = parts[1].trim();
             const numbers = valStr.match(/[\d,.]+(\s*(yeṇe|dene|yene|dene))?/gi) || [];
             const upperLbl = label.toUpperCase();
-            const isPaymentOrBalance = upperLbl.includes('PAYMENT') || 
-                                       upperLbl.includes('REMAINING') || 
-                                       upperLbl.includes('PAGAR') || 
-                                       upperLbl.includes('MAGIL') || 
-                                       upperLbl.includes('SUBTOTAL') || 
-                                       upperLbl.includes('MISS') || 
-                                       upperLbl.includes('FARAK') || 
-                                       upperLbl.includes('COM');
+            const isPaymentOnlyLine = upperLbl.startsWith('PAYMENT') || 
+                                       upperLbl.startsWith('MISS PAYMENT') || 
+                                       upperLbl.startsWith('FARAK') || 
+                                       upperLbl.startsWith('MISS');
 
             if (numbers.length >= 2) {
                 sellVal = numbers[0].trim();
@@ -2183,18 +2179,20 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
                 sellVal = '';
             } else {
                 if (numbers.length === 1) {
-                    if (isPaymentOrBalance) {
+                    if (isPaymentOnlyLine) {
                         payVal = numbers[0].trim();
                         sellVal = '';
                     } else {
                         sellVal = numbers[0].trim();
+                        payVal = '';
                     }
                 } else {
-                    if (isPaymentOrBalance) {
+                    if (isPaymentOnlyLine) {
                         payVal = valStr;
                         sellVal = '';
                     } else {
                         sellVal = valStr;
+                        payVal = '';
                     }
                 }
             }
@@ -2403,7 +2401,7 @@ function renderReceiptImageCanvas(formattedMessage, customerName) {
             } else {
                 ctx.fillStyle = '#0f172a';
             }
-            ctx.fillText(valToDraw, (isWeekly || row.payVal) ? payColX : sellColX, currentY);
+            ctx.fillText(valToDraw, isWeekly ? payColX : sellColX, currentY);
         } else {
             ctx.fillStyle = isHighlight ? '#0284c7' : '#0f172a';
             ctx.textAlign = 'left';
